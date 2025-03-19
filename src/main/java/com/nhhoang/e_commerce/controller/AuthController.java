@@ -8,15 +8,22 @@ import com.nhhoang.e_commerce.security.jwt.JwtUtil;
 import com.nhhoang.e_commerce.utils.Api.*;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -27,6 +34,12 @@ public class AuthController {
 
     @Autowired
     private JwtUtil jwtUtil;
+
+    @Autowired
+    private RedisTemplate<String, String> redisTemplate;
+
+    @Autowired
+    private JavaMailSender mailSender;
 
     //login
     @PostMapping("/login")
@@ -121,5 +134,40 @@ public class AuthController {
             return ResponseEntity.ok(new SuccessResponse("Thông tin user", responseData));
         }
         return ResponseEntity.status(403).body(new ErrorResponse("Bạn cần đăng nhập"));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        try {
+            User user = authService.findByEmail(request.getEmail());
+            if (user == null) {
+                return ResponseEntity.badRequest().body(new ErrorResponse("Người dùng không tồn tại"));
+            }
+
+            String otpCode = String.format("%04d", new Random().nextInt(10000));
+            String redisKey = "otp:" + request.getEmail();
+
+            redisTemplate.opsForValue().set(redisKey, otpCode, 300, TimeUnit.SECONDS);
+
+            Long ttl = redisTemplate.getExpire(redisKey, TimeUnit.SECONDS);
+            Instant expirationTime = ttl > 0 ? Instant.now().plus(ttl, ChronoUnit.SECONDS) : null;
+
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(user.getEmail());
+            message.setSubject("Mã xác thực (OTP)");
+            message.setText(String.format("Chào %s,\n\nMã xác thực của bạn là: %s\nMã có hiệu lực trong 5 phút.",
+                    user.getName(), otpCode));
+            message.setFrom("your-email@gmail.com");
+            mailSender.send(message);
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("message", "Mã OTP đã được gửi qua email.");
+            data.put("expiration", expirationTime != null ? expirationTime.toString() : null);
+            data.put("email", request.getEmail());
+
+            return ResponseEntity.ok(new SuccessResponse("Gửi mail thành công", data));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(new ErrorResponse("Lỗi server: " + e.getMessage()));
+        }
     }
 }

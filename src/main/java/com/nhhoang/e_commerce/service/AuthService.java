@@ -55,6 +55,10 @@ public class AuthService {
                 .orElseThrow(() -> new RuntimeException("User không tồn tại"));
     }
 
+    public User findByEmail(String email) {
+        return userRepository.findByEmail(email).orElse(null);
+    }
+
     public UserResponse mapToUserResponse(User user) {
         UserResponse response = new UserResponse();
         response.setId(user.getId());
