@@ -27,6 +27,7 @@ public class AuthController {
     @Autowired
     private JwtUtil jwtUtil;
 
+    //login
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
         try {
@@ -52,6 +53,7 @@ public class AuthController {
         }
     }
 
+    //register
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequests request) {
         try {
@@ -60,5 +62,21 @@ public class AuthController {
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         }
+    }
+
+    //logout
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout() {
+        ResponseCookie deleteRefreshTokenCookie = ResponseCookie.from("refreshToken", null)
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("Lax")
+                .maxAge(0) 
+                .path("/")
+                .build();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, deleteRefreshTokenCookie.toString())
+                .body(new SuccessResponse("Đăng xuất thành công",null));
     }
 }
