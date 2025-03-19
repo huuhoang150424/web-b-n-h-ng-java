@@ -30,7 +30,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (token != null && token.startsWith("Bearer ")) {
             try {
-                String jwtToken = token.substring(7); // Bỏ "Bearer "
+                String jwtToken = token.substring(7);
                 String userId = jwtUtil.extractUserId(jwtToken);
 
                 User user = userRepository.findById(userId).orElse(null);

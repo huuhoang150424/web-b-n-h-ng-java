@@ -81,6 +81,36 @@ public class AuthController {
                 .body(new SuccessResponse("Đăng xuất thành công",null));
     }
 
+    @GetMapping("/refresh-token")
+    public ResponseEntity<?> refreshToken(HttpServletRequest request) {
+        String refreshToken = null;
+        jakarta.servlet.http.Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (jakarta.servlet.http.Cookie cookie : cookies) {
+                if ("refreshToken".equals(cookie.getName())) {
+                    refreshToken = cookie.getValue();
+                    break;
+                }
+            }
+        }
+
+        System.out.println("Refresh Token: " + refreshToken);
+
+        if (refreshToken != null && jwtUtil.validateToken(refreshToken)) {
+            String userId = jwtUtil.extractUserId(refreshToken);
+            User user = authService.findById(userId);
+            if (user != null) {
+                String accessToken = jwtUtil.generateAccessToken(user);
+                Map<String, String> responseData = new HashMap<>();
+                responseData.put("refreshToken", refreshToken); // Giữ nguyên refreshToken
+                responseData.put("accessToken", accessToken);
+                return ResponseEntity.ok(responseData);
+            }
+        }
+
+        return ResponseEntity.status(401).body(new ErrorResponse("Refresh token không hợp lệ"));
+    }
+
     @GetMapping("/profile")
     public ResponseEntity<?> getProfile(HttpServletRequest request) {
         User user = (User) request.getAttribute("user");
