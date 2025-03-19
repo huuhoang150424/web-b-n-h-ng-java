@@ -203,5 +203,28 @@ public class AuthController {
         }
     }
 
+    //verify-code
+    @PostMapping("/verify-code")
+    public ResponseEntity<?> verifyCode(@Valid @RequestBody VerifyOTPRequest request) {
+        try {
+            String storedOtp = redisTemplate.opsForValue().get("otp:" + request.getEmail());
+            if (storedOtp == null) {
+                return ResponseEntity.badRequest().body(new ErrorResponse("Mã OTP đã hết hạn hoặc không tồn tại"));
+            }
+            if (!storedOtp.equals(request.getOtpCode())) {
+                return ResponseEntity.badRequest().body(new ErrorResponse("Mã OTP không hợp lệ"));
+            }
+            User user = authService.findByEmail(request.getEmail());
+            if (user == null) {
+                return ResponseEntity.badRequest().body(new ErrorResponse("Email không tồn tại trong hệ thống"));
+            }
+            redisTemplate.delete("otp:" + request.getEmail());
+            Map<String, Object> result = new HashMap<>();
+            result.put("message", "Mã OTP hợp lệ và đã được xác thực.");
+            return ResponseEntity.ok(new SuccessResponse("Xác thực thành công", result));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(new ErrorResponse("Lỗi server: " + e.getMessage()));
+        }
+    }
 
 }
