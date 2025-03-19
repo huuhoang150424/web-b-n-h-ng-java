@@ -11,8 +11,8 @@ import java.util.UUID;
 public class Order {
 
     @Id
-    @Column(columnDefinition = "CHAR(36)")
-    private UUID id;
+    @Column(length = 36, unique = true, nullable = false)
+    private String id = UUID.randomUUID().toString();
 
     @Column(name = "order_code", length = 7, unique = true)
     private String orderCode;
@@ -45,9 +45,6 @@ public class Order {
 
     @PrePersist
     public void prePersist() {
-        if (id == null) {
-            id = UUID.randomUUID();
-        }
         if (createdAt == null) {
             createdAt = LocalDateTime.now();
         }

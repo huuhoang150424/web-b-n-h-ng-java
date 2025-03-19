@@ -13,8 +13,8 @@ import java.util.UUID;
 public class Product {
 
     @Id
-    @Column(columnDefinition = "CHAR(36)")
-    private UUID id;
+    @Column(length = 36, unique = true, nullable = false)
+    private String id = UUID.randomUUID().toString();
 
     @Column(length = 60, unique = true)
     private String slug;
@@ -52,9 +52,6 @@ public class Product {
 
     @PrePersist
     public void prePersist() {
-        if (id == null) {
-            id = UUID.randomUUID();
-        }
         if (createdAt == null) {
             createdAt = LocalDateTime.now();
         }

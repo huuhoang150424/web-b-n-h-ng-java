@@ -11,8 +11,8 @@ import java.util.UUID;
 public class FavoriteProduct {
 
     @Id
-    @Column(columnDefinition = "CHAR(36)")
-    private UUID id;
+    @Column(length = 36, unique = true, nullable = false)
+    private String id = UUID.randomUUID().toString();
 
     @ManyToOne
     @JoinColumn(name = "user_id")
@@ -30,9 +30,6 @@ public class FavoriteProduct {
 
     @PrePersist
     public void prePersist() {
-        if (id == null) {
-            id = UUID.randomUUID();
-        }
         if (createdAt == null) {
             createdAt = LocalDateTime.now();
         }

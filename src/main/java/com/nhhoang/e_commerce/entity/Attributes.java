@@ -11,8 +11,8 @@ import java.util.UUID;
 public class Attributes {
 
     @Id
-    @Column(columnDefinition = "CHAR(36)")
-    private UUID id;
+    @Column(length = 36, unique = true, nullable = false)
+    private String id = UUID.randomUUID().toString();
 
     @Column(name = "attribute_name", length = 50)
     private String attributeName;
@@ -25,9 +25,6 @@ public class Attributes {
 
     @PrePersist
     public void prePersist() {
-        if (id == null) {
-            id = UUID.randomUUID();
-        }
         if (createdAt == null) {
             createdAt = LocalDateTime.now();
         }

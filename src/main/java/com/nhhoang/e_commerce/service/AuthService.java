@@ -50,7 +50,7 @@ public class AuthService {
 
 
     @Cacheable(value = "users", key = "'user_' + #id")
-    public User findById(UUID id) {
+    public User findById(String id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User không tồn tại"));
     }

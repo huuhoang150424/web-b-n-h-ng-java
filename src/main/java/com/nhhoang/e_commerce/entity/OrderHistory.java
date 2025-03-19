@@ -11,8 +11,8 @@ import java.util.UUID;
 public class OrderHistory {
 
     @Id
-    @Column(columnDefinition = "CHAR(36)")
-    private UUID id;
+    @Column(length = 36, unique = true, nullable = false)
+    private String id = UUID.randomUUID().toString();
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status")
@@ -34,9 +34,6 @@ public class OrderHistory {
 
     @PrePersist
     public void prePersist() {
-        if (id == null) {
-            id = UUID.randomUUID();
-        }
         if (status == null) {
             status = Status.PROCESSING;
         }
