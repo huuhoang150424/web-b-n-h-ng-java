@@ -226,5 +226,25 @@ public class AuthController {
             return ResponseEntity.status(500).body(new ErrorResponse("Lỗi server: " + e.getMessage()));
         }
     }
+    //reset-password
+    @PatchMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        try {
+            User user = authService.findByEmail(request.getEmail());
+            if (user == null) {
+                return ResponseEntity.badRequest().body(new ErrorResponse("Tài khoản không tồn tại"));
+            }
+            if (!request.getPassword().equals(request.getConfirmPassword())) {
+                return ResponseEntity.badRequest().body(new ErrorResponse("Xác nhận mật khẩu không chính xác"));
+            }
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
+            authService.updateUser(user);
+            Map<String, Object> result = new HashMap<>();
+            result.put("message", "Đổi mật khẩu thành công");
+            return ResponseEntity.ok(new SuccessResponse("Thành công", result));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(new ErrorResponse("Lỗi server: " + e.getMessage()));
+        }
+    }
 
 }
