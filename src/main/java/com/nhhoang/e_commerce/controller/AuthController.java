@@ -14,6 +14,7 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
@@ -41,6 +42,9 @@ public class AuthController {
     @Autowired
     private JavaMailSender mailSender;
 
+    @Autowired
+    private BCryptPasswordEncoder passwordEncoder;
+
     //login
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
@@ -56,14 +60,15 @@ public class AuthController {
                     .maxAge(365 * 24 * 60 * 60)
                     .path("/")
                     .build();
-            Map<String, Object> responseData = new HashMap<>();
-            responseData.put("accessToken", accessToken);
-            responseData.put("user", userResponse);
+            Map<String, Object> result = new HashMap<>();
+            result.put("accessToken", accessToken);
+            result.put("user", userResponse);
             return ResponseEntity.ok()
                     .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString())
-                    .body(new SuccessResponse("Đăng nhập thành công", responseData));
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
+                    .body(new SuccessResponse("Đăng nhập thành công", result));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body(new ErrorResponse("Lỗi không xác định: " + e.getMessage()));
         }
     }
 
@@ -77,6 +82,7 @@ public class AuthController {
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         }
     }
+
 
     //logout
     @PostMapping("/logout")
@@ -170,4 +176,32 @@ public class AuthController {
             return ResponseEntity.status(500).body(new ErrorResponse("Lỗi server: " + e.getMessage()));
         }
     }
+
+    //change password
+    @PatchMapping("/change-password")
+    public ResponseEntity<?> changePassword(@Valid @RequestBody ChangePasswordRequest request,
+                                            HttpServletRequest httpRequest) {
+        try {
+            User user = (User) httpRequest.getAttribute("user");
+            if (user == null) {
+                return ResponseEntity.status(403).body(new ErrorResponse("Bạn cần đăng nhập"));
+            }
+            if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
+                return ResponseEntity.badRequest().body(new ErrorResponse("Mật khẩu cũ không đúng"));
+            }
+            if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+                return ResponseEntity.badRequest().body(new ErrorResponse("Mật khẩu xác nhận không khớp"));
+            }
+            user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+            authService.updateUser(user);
+
+            Map<String, String> responseData = new HashMap<>();
+            responseData.put("message", "Mật khẩu đã được thay đổi thành công!");
+            return ResponseEntity.ok(responseData);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(new ErrorResponse("Lỗi server: " + e.getMessage()));
+        }
+    }
+
+
 }

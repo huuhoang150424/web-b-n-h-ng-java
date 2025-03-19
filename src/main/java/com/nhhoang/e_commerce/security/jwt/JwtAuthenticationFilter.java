@@ -2,7 +2,6 @@ package com.nhhoang.e_commerce.security.jwt;
 
 import com.nhhoang.e_commerce.entity.User;
 import com.nhhoang.e_commerce.repository.UserRepository;
-import com.nhhoang.e_commerce.security.jwt.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -12,11 +11,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-
-
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
-
     @Autowired
     private JwtUtil jwtUtil;
 

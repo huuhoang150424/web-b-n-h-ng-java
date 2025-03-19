@@ -10,7 +10,6 @@ import org.springframework.stereotype.Component;
 import com.nhhoang.e_commerce.entity.User;
 
 import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;

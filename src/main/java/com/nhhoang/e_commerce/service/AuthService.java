@@ -48,8 +48,6 @@ public class AuthService {
     }
 
 
-
-    @Cacheable(value = "users", key = "'user_' + #id")
     public User findById(String id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User không tồn tại"));
@@ -57,6 +55,10 @@ public class AuthService {
 
     public User findByEmail(String email) {
         return userRepository.findByEmail(email).orElse(null);
+    }
+
+    public void updateUser(User user) {
+        userRepository.save(user);
     }
 
     public UserResponse mapToUserResponse(User user) {
