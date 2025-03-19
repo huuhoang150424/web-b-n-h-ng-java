@@ -55,7 +55,7 @@ public class AuthService {
                 .orElseThrow(() -> new RuntimeException("User không tồn tại"));
     }
 
-    private UserResponse mapToUserResponse(User user) {
+    public UserResponse mapToUserResponse(User user) {
         UserResponse response = new UserResponse();
         response.setId(user.getId());
         response.setName(user.getName());

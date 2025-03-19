@@ -6,6 +6,7 @@ import com.nhhoang.e_commerce.entity.User;
 import com.nhhoang.e_commerce.service.AuthService;
 import com.nhhoang.e_commerce.security.jwt.JwtUtil;
 import com.nhhoang.e_commerce.utils.Api.*;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
@@ -71,12 +72,24 @@ public class AuthController {
                 .httpOnly(true)
                 .secure(true)
                 .sameSite("Lax")
-                .maxAge(0) 
+                .maxAge(0)
                 .path("/")
                 .build();
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, deleteRefreshTokenCookie.toString())
                 .body(new SuccessResponse("Đăng xuất thành công",null));
+    }
+
+    @GetMapping("/profile")
+    public ResponseEntity<?> getProfile(HttpServletRequest request) {
+        User user = (User) request.getAttribute("user");
+        if (user != null) {
+            UserResponse userResponse = authService.mapToUserResponse(user);
+            Map<String, Object> responseData = new HashMap<>();
+            responseData.put("accessToken", userResponse);
+            return ResponseEntity.ok(new SuccessResponse("Thông tin user", responseData));
+        }
+        return ResponseEntity.status(403).body(new ErrorResponse("Bạn cần đăng nhập"));
     }
 }
