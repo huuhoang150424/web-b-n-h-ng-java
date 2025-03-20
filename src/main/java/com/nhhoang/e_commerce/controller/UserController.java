@@ -1,12 +1,15 @@
 package com.nhhoang.e_commerce.controller;
 
 import com.nhhoang.e_commerce.dto.requests.ChangePhoneRequest;
+import com.nhhoang.e_commerce.dto.requests.UpdateProfileRequest;
+import com.nhhoang.e_commerce.dto.response.UserProfileResponse;
 import com.nhhoang.e_commerce.entity.User;
 import com.nhhoang.e_commerce.service.UserService;
 import com.nhhoang.e_commerce.utils.Api.ErrorResponse;
 import com.nhhoang.e_commerce.utils.Api.SuccessResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -35,6 +38,46 @@ public class UserController {
 
             Map<String, Object> result = new HashMap<>();
             result.put("message", "Số điện thoại đã được thay đổi thành công!");
+            return ResponseEntity.ok(new SuccessResponse("Thành công", result));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(404).body(new ErrorResponse("Người dùng không tồn tại"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(new ErrorResponse("Lỗi server: " + e.getMessage()));
+        }
+    }
+    @PutMapping("/update-profile")
+    public ResponseEntity<?> updateProfile(@Valid @RequestBody UpdateProfileRequest request,
+                                           BindingResult bindingResult,
+                                           HttpServletRequest httpRequest) {
+        try {
+            User user = (User) httpRequest.getAttribute("user");
+            System.out.println("User from request: " + (user != null ? user.getEmail() : "null"));
+            if (user == null) {
+                return ResponseEntity.status(403).body(new ErrorResponse("Bạn cần đăng nhập"));
+            }
+
+            if (bindingResult.hasErrors()) {
+                Map<String, String> errors = new HashMap<>();
+                bindingResult.getFieldErrors().forEach(error ->
+                        errors.put(error.getField(), error.getDefaultMessage()));
+                return ResponseEntity.badRequest().body(new ErrorResponse("Dữ liệu không hợp lệ", errors));
+            }
+
+            // Cập nhật profile
+            User updatedUser = userService.updateProfile(user.getId(), request);
+
+            // Tạo response data
+            UserProfileResponse responseData = new UserProfileResponse();
+            responseData.setName(updatedUser.getName());
+            responseData.setEmail(updatedUser.getEmail());
+            responseData.setGender(updatedUser.getGender());
+            responseData.setAvatar(updatedUser.getAvatar());
+            responseData.setBirthDate(updatedUser.getBirthDate());
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("message", "Cập nhật thông tin người dùng thành công");
+            result.put("data", responseData);
+
             return ResponseEntity.ok(new SuccessResponse("Thành công", result));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(404).body(new ErrorResponse("Người dùng không tồn tại"));

@@ -1,5 +1,6 @@
 package com.nhhoang.e_commerce.service;
 
+import com.nhhoang.e_commerce.dto.requests.UpdateProfileRequest;
 import com.nhhoang.e_commerce.entity.User;
 import com.nhhoang.e_commerce.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,5 +19,28 @@ public class UserService {
                 .orElseThrow(() -> new IllegalArgumentException("Người dùng không tồn tại"));
         user.setPhone(phone);
         userRepository.save(user);
+    }
+    public User updateProfile(String userId, UpdateProfileRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Người dùng không tồn tại"));
+
+        // Cập nhật các trường nếu có trong request
+        if (request.getName() != null) {
+            user.setName(request.getName());
+        }
+        if (request.getEmail() != null) {
+            user.setEmail(request.getEmail());
+        }
+        if (request.getGender() != null) {
+            user.setGender(request.getGender());
+        }
+        if (request.getAvatar() != null) {
+            user.setAvatar(request.getAvatar());
+        }
+        if (request.getBirthDate() != null) {
+            user.setBirthDate(request.getBirthDate());
+        }
+
+        return userRepository.save(user);
     }
 }
