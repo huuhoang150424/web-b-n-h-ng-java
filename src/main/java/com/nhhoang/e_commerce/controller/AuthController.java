@@ -6,19 +6,25 @@ import com.nhhoang.e_commerce.entity.User;
 import com.nhhoang.e_commerce.service.AuthService;
 import com.nhhoang.e_commerce.security.jwt.JwtUtil;
 import com.nhhoang.e_commerce.utils.Api.*;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 
+import javax.security.sasl.AuthenticationException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
@@ -51,8 +57,9 @@ public class AuthController {
         try {
             UserResponse userResponse = authService.login(request);
             User user = authService.findById(userResponse.getId());
-            String accessToken = jwtUtil.generateAccessToken(user);
-            String refreshToken = jwtUtil.generateRefreshToken(user);
+            String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getRole());
+            String refreshToken = jwtUtil.generateRefreshToken(user.getId());
+
             ResponseCookie refreshTokenCookie = ResponseCookie.from("refreshToken", refreshToken)
                     .httpOnly(true)
                     .secure(true)
@@ -60,18 +67,27 @@ public class AuthController {
                     .maxAge(365 * 24 * 60 * 60)
                     .path("/")
                     .build();
+
             Map<String, Object> result = new HashMap<>();
             result.put("accessToken", accessToken);
             result.put("user", userResponse);
+
             return ResponseEntity.ok()
                     .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString())
                     .body(new SuccessResponse("Đăng nhập thành công", result));
+
+        } catch (BadCredentialsException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse("Sai tài khoản hoặc mật khẩu"));
+        } catch (DisabledException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ErrorResponse("Tài khoản của bạn đã bị vô hiệu hóa"));
+        } catch (LockedException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ErrorResponse("Tài khoản của bạn đã bị khóa"));
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.badRequest().body(new ErrorResponse("Lỗi không xác định: " + e.getMessage()));
         }
-    }
 
+    }
     //register
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequests request) {
@@ -102,37 +118,49 @@ public class AuthController {
 
     @GetMapping("/refresh-token")
     public ResponseEntity<?> refreshToken(HttpServletRequest request) {
-        String refreshToken = null;
-        jakarta.servlet.http.Cookie[] cookies = request.getCookies();
-        if (cookies != null) {
-            for (jakarta.servlet.http.Cookie cookie : cookies) {
+        try {
+            // Lấy refreshToken từ cookie
+            String refreshToken = getRefreshTokenFromCookies(request);
+            if (refreshToken == null || !jwtUtil.validateToken(refreshToken)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse("Refresh token không hợp lệ"));
+            }
+
+            // Trích xuất userId từ token
+            String userId = jwtUtil.extractUserId(refreshToken);
+            User user = authService.findById(userId);
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse("Người dùng không tồn tại"));
+            }
+
+            // Tạo accessToken mới
+            String accessToken = jwtUtil.generateAccessToken(user.getId(),user.getRole());
+
+            // Phản hồi với accessToken mới, giữ nguyên refreshToken
+            Map<String, String> responseData = new HashMap<>();
+            responseData.put("refreshToken", refreshToken);
+            responseData.put("accessToken", accessToken);
+
+            return ResponseEntity.ok(responseData);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse("Lỗi khi làm mới token"));
+        }
+    }
+
+    private String getRefreshTokenFromCookies(HttpServletRequest request) {
+        if (request.getCookies() != null) {
+            for (Cookie cookie : request.getCookies()) {
                 if ("refreshToken".equals(cookie.getName())) {
-                    refreshToken = cookie.getValue();
-                    break;
+                    return cookie.getValue();
                 }
             }
         }
-
-        System.out.println("Refresh Token: " + refreshToken);
-
-        if (refreshToken != null && jwtUtil.validateToken(refreshToken)) {
-            String userId = jwtUtil.extractUserId(refreshToken);
-            User user = authService.findById(userId);
-            if (user != null) {
-                String accessToken = jwtUtil.generateAccessToken(user);
-                Map<String, String> responseData = new HashMap<>();
-                responseData.put("refreshToken", refreshToken); // Giữ nguyên refreshToken
-                responseData.put("accessToken", accessToken);
-                return ResponseEntity.ok(responseData);
-            }
-        }
-
-        return ResponseEntity.status(401).body(new ErrorResponse("Refresh token không hợp lệ"));
+        return null;
     }
-
     @GetMapping("/profile")
     public ResponseEntity<?> getProfile(HttpServletRequest request) {
         User user = (User) request.getAttribute("user");
+        System.out.println("user "+user);
         if (user != null) {
             UserResponse userResponse = authService.mapToUserResponse(user);
             Map<String, Object> responseData = new HashMap<>();

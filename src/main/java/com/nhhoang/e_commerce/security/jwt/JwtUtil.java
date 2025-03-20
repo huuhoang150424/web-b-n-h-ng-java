@@ -1,83 +1,62 @@
 package com.nhhoang.e_commerce.security.jwt;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import com.nhhoang.e_commerce.dto.Enum.Role;
+import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import com.nhhoang.e_commerce.entity.User;
-
-import javax.crypto.SecretKey;
-import java.util.Base64;
+import java.security.Key;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.function.Function;
 
 @Component
 public class JwtUtil {
+    private final String secretKey = "RnZEMno2UlFuUjJQTCtBeDBxODJLOGFKWUtObTNkWmhPZEZ6WVhlVjhQdEx4RA==";
+    private final long accessTokenExpiration = 1000 * 60 * 15;
+    private final long refreshTokenExpiration = 1000 * 60 * 60 * 24;
 
-    @Value("${jwt.secret}")
-    private String secret;
-
-    @Value("${jwt.access-token-expiration}")
-    private long accessTokenExpiration;
-
-    @Value("${jwt.refresh-token-expiration}")
-    private long refreshTokenExpiration;
-
-    public String generateAccessToken(User user) {
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("user_id", user.getId().toString());
-        claims.put("isAdmin", user.getIsAdmin());
-        return createToken(claims, user.getEmail(), accessTokenExpiration);
+    private Key getSigningKey() {
+        return Keys.hmacShaKeyFor(secretKey.getBytes());
     }
 
-    public String generateRefreshToken(User user) {
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("user_id", user.getId().toString());
-        claims.put("isAdmin", user.getIsAdmin());
-        return createToken(claims, user.getEmail(), refreshTokenExpiration);
-    }
-
-    private SecretKey getSigningKey() {
-        byte[] keyBytes = Base64.getDecoder().decode(secret);
-        return Keys.hmacShaKeyFor(keyBytes);
-    }
-
-    private String createToken(Map<String, Object> claims, String subject, long expiration) {
+    public String generateAccessToken(String userId, Role role) {
         return Jwts.builder()
-                .setClaims(claims)
-                .setSubject(subject)
-                .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + expiration))
+                .setSubject(userId)
+                .claim("role", role)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + accessTokenExpiration))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 
-    public Claims extractClaims(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(getSigningKey())
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
-    }
-
-    public String extractUserId(String token) {
-        return extractClaims(token).get("user_id", String.class);
-    }
-
-    public boolean isTokenExpired(String token) {
-        return extractClaims(token).getExpiration().before(new Date());
+    public String generateRefreshToken(String userId) {
+        return Jwts.builder()
+                .setSubject(userId)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + refreshTokenExpiration))
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .compact();
     }
 
     public boolean validateToken(String token) {
         try {
-            extractClaims(token);
-            return !isTokenExpired(token);
-        } catch (Exception e) {
+            Jwts.parserBuilder().setSigningKey(getSigningKey()).build().parseClaimsJws(token);
+            return true;
+        } catch (JwtException e) {
             return false;
         }
+    }
+
+    public String extractUserId(String token) {
+        return extractClaim(token, Claims::getSubject);
+    }
+
+    public String extractUserRole(String token) {
+        return extractClaim(token, claims -> claims.get("role", String.class));
+    }
+
+    private <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
+        Claims claims = Jwts.parserBuilder().setSigningKey(getSigningKey()).build().parseClaimsJws(token).getBody();
+        return claimsResolver.apply(claims);
     }
 }

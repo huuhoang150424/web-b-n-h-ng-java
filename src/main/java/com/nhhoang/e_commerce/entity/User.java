@@ -1,13 +1,13 @@
 package com.nhhoang.e_commerce.entity;
 
 import com.nhhoang.e_commerce.utils.JsonListConverter;
+import com.nhhoang.e_commerce.dto.Enum.Role;
 import lombok.Data;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
-import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Entity
 @Table(name = "users")
@@ -33,11 +33,12 @@ public class User {
     @Column(length = 10, nullable = true)
     private String phone;
 
-    @Column(name = "is_admin")
-    private Boolean isAdmin;
-
     @Column(length = 150)
     private String avatar;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 10, nullable = false)
+    private Role role;
 
     @Convert(converter = JsonListConverter.class)
     @Column(columnDefinition = "TEXT")
@@ -61,7 +62,7 @@ public class User {
             birthDate = LocalDate.now();
         }
         if (avatar == null) {
-            avatar = "https://res.cloudinary.com/dw3oj3iju/image/upload/v1709749732/chat_app/b1rj7epnhdqo6t7mcu5w.jpg";  // Default avatar
+            avatar = "https://res.cloudinary.com/dw3oj3iju/image/upload/v1709749732/chat_app/b1rj7epnhdqo6t7mcu5w.jpg";
         }
         if (gender == null) {
             gender = Gender.OTHER;
@@ -69,8 +70,8 @@ public class User {
         if (phone == null) {
             phone = "123457890";
         }
-        if (isAdmin == null) {
-            isAdmin = false;
+        if (role == null) {
+            role = Role.USER;
         }
         if (address == null) {
             address = List.of();
