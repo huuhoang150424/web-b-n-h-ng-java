@@ -55,4 +55,14 @@ public class UserService {
 
         userRepository.save(user);
     }
+    public void deleteAddress(String userId, String address) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Người dùng không tồn tại"));
+
+        ArrayList<String> updatedAddress = new ArrayList<>(user.getAddress());
+        updatedAddress.remove(address);
+        user.setAddress(updatedAddress);
+
+        userRepository.save(user);
+    }
 }
