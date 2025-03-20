@@ -6,6 +6,7 @@ import com.nhhoang.e_commerce.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.UUID;
 
 @Service
@@ -42,5 +43,16 @@ public class UserService {
         }
 
         return userRepository.save(user);
+    }
+
+    public void addAddress(String userId, String address) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Người dùng không tồn tại"));
+
+        ArrayList<String> updatedAddress = new ArrayList<>(user.getAddress());
+        updatedAddress.add(address);
+        user.setAddress(updatedAddress);
+
+        userRepository.save(user);
     }
 }

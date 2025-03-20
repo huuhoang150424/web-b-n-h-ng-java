@@ -1,5 +1,6 @@
 package com.nhhoang.e_commerce.controller;
 
+import com.nhhoang.e_commerce.dto.requests.AddAddressRequest;
 import com.nhhoang.e_commerce.dto.requests.ChangePhoneRequest;
 import com.nhhoang.e_commerce.dto.requests.UpdateProfileRequest;
 import com.nhhoang.e_commerce.dto.response.UserProfileResponse;
@@ -77,6 +78,38 @@ public class UserController {
             Map<String, Object> result = new HashMap<>();
             result.put("message", "Cập nhật thông tin người dùng thành công");
             result.put("data", responseData);
+
+            return ResponseEntity.ok(new SuccessResponse("Thành công", result));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(404).body(new ErrorResponse("Người dùng không tồn tại"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(new ErrorResponse("Lỗi server: " + e.getMessage()));
+        }
+    }
+
+    @PatchMapping("/add-address")
+    public ResponseEntity<?> addAddress(@Valid @RequestBody AddAddressRequest request,
+                                        BindingResult bindingResult,
+                                        HttpServletRequest httpRequest) {
+        try {
+            User user = (User) httpRequest.getAttribute("user");
+            System.out.println("User from request: " + (user != null ? user.getEmail() : "null"));
+            if (user == null) {
+                return ResponseEntity.status(403).body(new ErrorResponse("Bạn cần đăng nhập"));
+            }
+            if (bindingResult.hasErrors()) {
+                Map<String, String> errors = new HashMap<>();
+                bindingResult.getFieldErrors().forEach(error ->
+                        errors.put(error.getField(), error.getDefaultMessage()));
+                return ResponseEntity.badRequest().body(new ErrorResponse("Dữ liệu không hợp lệ", errors));
+            }
+            if (user.getAddress().contains(request.getAddress())) {
+                return ResponseEntity.badRequest().body(new ErrorResponse("Địa chỉ này đã tồn tại"));
+            }
+            userService.addAddress(user.getId(), request.getAddress());
+            Map<String, Object> result = new HashMap<>();
+            result.put("message", "Thêm mới địa chỉ thành công");
+            result.put("updated_address_list", user.getAddress());
 
             return ResponseEntity.ok(new SuccessResponse("Thành công", result));
         } catch (IllegalArgumentException e) {
