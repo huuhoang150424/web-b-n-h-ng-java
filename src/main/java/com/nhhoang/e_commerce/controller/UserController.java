@@ -1,9 +1,6 @@
 package com.nhhoang.e_commerce.controller;
 
-import com.nhhoang.e_commerce.dto.requests.AddAddressRequest;
-import com.nhhoang.e_commerce.dto.requests.ChangePhoneRequest;
-import com.nhhoang.e_commerce.dto.requests.DeleteAddressRequest;
-import com.nhhoang.e_commerce.dto.requests.UpdateProfileRequest;
+import com.nhhoang.e_commerce.dto.requests.*;
 import com.nhhoang.e_commerce.dto.response.UserProfileResponse;
 import com.nhhoang.e_commerce.entity.User;
 import com.nhhoang.e_commerce.service.UserService;
@@ -147,6 +144,31 @@ public class UserController {
             return ResponseEntity.ok(new SuccessResponse("Thành công", result));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(404).body(new ErrorResponse("Người dùng không tồn tại"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(new ErrorResponse("Lỗi server: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/create-user")
+    public ResponseEntity<?> createUser(@Valid @RequestBody CreateUserRequest request,
+                                        BindingResult bindingResult,
+                                        HttpServletRequest httpRequest) {
+        try {
+            if (bindingResult.hasErrors()) {
+                Map<String, String> errors = new HashMap<>();
+                bindingResult.getFieldErrors().forEach(error ->
+                        errors.put(error.getField(), error.getDefaultMessage()));
+                return ResponseEntity.badRequest().body(new ErrorResponse("Dữ liệu không hợp lệ", errors));
+            }
+
+            userService.createUser(request);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("message", "Tạo mới người dùng thành công");
+
+            return ResponseEntity.status(201).body(new SuccessResponse("Thành công", result));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(new ErrorResponse("Lỗi server: " + e.getMessage()));
         }
