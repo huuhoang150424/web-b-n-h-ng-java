@@ -1,7 +1,10 @@
 package com.nhhoang.e_commerce.controller;
 
+import com.nhhoang.e_commerce.dto.Enum.Role;
 import com.nhhoang.e_commerce.dto.requests.*;
+import com.nhhoang.e_commerce.dto.response.GetAllUserResponse;
 import com.nhhoang.e_commerce.dto.response.UserProfileResponse;
+import com.nhhoang.e_commerce.dto.response.UserResponse;
 import com.nhhoang.e_commerce.entity.User;
 import com.nhhoang.e_commerce.service.UserService;
 import com.nhhoang.e_commerce.utils.Api.ErrorResponse;
@@ -10,12 +13,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.data.domain.Page;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/user")
@@ -172,5 +177,57 @@ public class UserController {
         } catch (Exception e) {
             return ResponseEntity.status(500).body(new ErrorResponse("Lỗi server: " + e.getMessage()));
         }
+    }
+
+    @GetMapping("/getAllUser")
+    public ResponseEntity<?> getAllUser(@RequestParam(required = false) Integer page,
+                                        @RequestParam(required = false) Integer size,
+                                        HttpServletRequest httpRequest) {
+        try {
+            User currentUser = (User) httpRequest.getAttribute("user");
+            if (currentUser == null) {
+                return ResponseEntity.status(403).body(new ErrorResponse("Bạn cần đăng nhập"));
+            }
+            if (!currentUser.getRole().equals(Role.ADMIN)) {
+                return ResponseEntity.status(403).body(new ErrorResponse("Chỉ ADMIN mới có quyền truy cập"));
+            }
+            Map<String, Object> result = new HashMap<>();
+            List<GetAllUserResponse> userData;
+            if (page == null && size == null) {
+                List<User> allUsers = userService.getAllUsers();
+                userData = allUsers.stream().map(this::mapToUserResponse).collect(Collectors.toList());
+                result.put("totalItems", userData.size());
+                result.put("currentPage", 1);
+                result.put("totalPages", 1);
+                result.put("pageSize", userData.size());
+                result.put("data", userData);
+            } else {
+                int pageNum = page != null ? page - 1 : 0;
+                int pageSize = size != null ? size : 10;
+                if (pageSize > 100) pageSize = 100;
+                Page<User> userPage = userService.getAllUsersPaginated(pageNum, pageSize);
+                userData = userPage.getContent().stream().map(this::mapToUserResponse).collect(Collectors.toList());
+                result.put("totalItems", userPage.getTotalElements());
+                result.put("currentPage", userPage.getNumber() + 1);
+                result.put("totalPages", userPage.getTotalPages());
+                result.put("pageSize", userPage.getSize());
+                result.put("data", userData);
+            }
+            return ResponseEntity.ok(new SuccessResponse("Thành công", result));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(new ErrorResponse("Lỗi server: " + e.getMessage()));
+        }
+    }
+
+    private GetAllUserResponse mapToUserResponse(User user) {
+        GetAllUserResponse response = new GetAllUserResponse();
+        response.setId(user.getId());
+        response.setName(user.getName());
+        response.setEmail(user.getEmail());
+        response.setGender(user.getGender());
+        response.setAvatar(user.getAvatar());
+        response.setRole(user.getRole());
+        response.setAddress(user.getAddress());
+        return response;
     }
 }
