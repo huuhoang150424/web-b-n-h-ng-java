@@ -106,4 +106,15 @@ public class UserService {
         return userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Tài khoản không tồn tại"));
     }
+
+    public void deleteUser(String id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Người dùng không tồn tại"));
+
+        if (user.getRole().equals(Role.ADMIN)) {
+            throw new IllegalArgumentException("Không thể xóa Admin");
+        }
+
+        userRepository.delete(user);
+    }
 }
