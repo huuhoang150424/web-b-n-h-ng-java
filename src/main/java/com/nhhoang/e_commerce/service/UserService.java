@@ -3,6 +3,7 @@ package com.nhhoang.e_commerce.service;
 import com.nhhoang.e_commerce.dto.Enum.Role;
 import com.nhhoang.e_commerce.dto.requests.CreateUserRequest;
 import com.nhhoang.e_commerce.dto.requests.UpdateProfileRequest;
+import com.nhhoang.e_commerce.dto.requests.UpdateUserRequest;
 import com.nhhoang.e_commerce.entity.User;
 import com.nhhoang.e_commerce.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +16,8 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.text.Normalizer;
+import java.util.regex.Pattern;
 
 @Service
 public class UserService {
@@ -116,5 +119,34 @@ public class UserService {
         }
 
         userRepository.delete(user);
+    }
+    public void updateUser(String id, UpdateUserRequest request) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Người dùng không tồn tại"));
+
+        if (request.getName() != null) {
+            String normalizedName = normalizeString(request.getName()); // Chuẩn hóa tên
+            user.setName(normalizedName);
+        }
+        if (request.getEmail() != null) {
+            user.setEmail(request.getEmail());
+        }
+        if (request.getGender() != null) {
+            user.setGender(request.getGender());
+        }
+        if (request.getAvatar() != null) {
+            user.setAvatar(request.getAvatar());
+        }
+        if (request.getRole() != null) {
+            user.setRole(request.getRole());
+        }
+
+        userRepository.save(user);
+    }
+
+    private String normalizeString(String input) {
+        String normalized = Normalizer.normalize(input, Normalizer.Form.NFD);
+        Pattern pattern = Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
+        return pattern.matcher(normalized).replaceAll("").replaceAll("[^\\p{ASCII}]", "");
     }
 }
