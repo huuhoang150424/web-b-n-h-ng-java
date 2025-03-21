@@ -3,6 +3,7 @@ package com.nhhoang.e_commerce.controller;
 import com.nhhoang.e_commerce.dto.Enum.Role;
 import com.nhhoang.e_commerce.dto.requests.*;
 import com.nhhoang.e_commerce.dto.response.GetAllUserResponse;
+import com.nhhoang.e_commerce.dto.response.GetUserResponse;
 import com.nhhoang.e_commerce.dto.response.UserProfileResponse;
 import com.nhhoang.e_commerce.dto.response.UserResponse;
 import com.nhhoang.e_commerce.entity.User;
@@ -228,6 +229,42 @@ public class UserController {
         response.setAvatar(user.getAvatar());
         response.setRole(user.getRole());
         response.setAddress(user.getAddress());
+        return response;
+    }
+
+    @GetMapping("/getUser")
+    public ResponseEntity<?> getUser(HttpServletRequest httpRequest) {
+        try {
+            User currentUser = (User) httpRequest.getAttribute("user");
+            if (currentUser == null) {
+                return ResponseEntity.status(403).body(new ErrorResponse("Bạn cần đăng nhập"));
+            }
+
+            User user = userService.getUserById(currentUser.getId());
+            GetUserResponse response = mapToUserProfileResponse(user);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("message", "Thành công");
+            result.put("data", response);
+
+            return ResponseEntity.ok(new SuccessResponse("Thành công", result));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(404).body(new ErrorResponse("Tài khoản không tồn tại"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(new ErrorResponse("Lỗi server: " + e.getMessage()));
+        }
+    }
+    private GetUserResponse mapToUserProfileResponse(User user) {
+        GetUserResponse response = new GetUserResponse();
+        response.setId(user.getId());
+        response.setName(user.getName());
+        response.setEmail(user.getEmail());
+        response.setGender(user.getGender());
+        response.setAvatar(user.getAvatar());
+        response.setRole(user.getRole());
+        response.setAddress(user.getAddress());
+        response.setPhone(user.getPhone());
+        response.setBirthDate(user.getBirthDate());
         return response;
     }
 }

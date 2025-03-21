@@ -101,4 +101,9 @@ public class UserService {
     public Page<User> getAllUsersPaginated(int page, int size) {
         return userRepository.findAll(PageRequest.of(page, size, Sort.by("id")));
     }
+
+    public User getUserById(String id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Tài khoản không tồn tại"));
+    }
 }
