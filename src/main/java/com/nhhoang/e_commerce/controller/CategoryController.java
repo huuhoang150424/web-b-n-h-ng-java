@@ -2,6 +2,7 @@ package com.nhhoang.e_commerce.controller;
 
 import com.nhhoang.e_commerce.dto.Enum.Role;
 import com.nhhoang.e_commerce.dto.requests.CreateCategoryRequest;
+import com.nhhoang.e_commerce.dto.requests.UpdateCategoryRequest;
 import com.nhhoang.e_commerce.dto.response.CategoryResponse;
 import com.nhhoang.e_commerce.entity.Category;
 import com.nhhoang.e_commerce.entity.User;
@@ -154,6 +155,32 @@ public class CategoryController {
             return ResponseEntity.status(404).body(new ErrorResponse("Danh mục không tồn tại"));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(new ErrorResponse("Lỗi không xác định"));
+        }
+    }
+
+    @PutMapping("/updateCat/{catId}")
+    public ResponseEntity<?> updateCategory(@PathVariable String catId,
+                                            @RequestBody UpdateCategoryRequest request,
+                                            HttpServletRequest httpRequest) {
+        try {
+            User currentUser = (User) httpRequest.getAttribute("user");
+            if (currentUser == null) {
+                return ResponseEntity.status(403).body(new ErrorResponse("Bạn cần đăng nhập"));
+            }
+            if (!currentUser.getRole().equals(Role.ADMIN)) {
+                return ResponseEntity.status(403).body(new ErrorResponse("Chỉ ADMIN mới có quyền truy cập"));
+            }
+
+            categoryService.updateCategory(catId, request);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("message", "Cập nhật danh mục thành công");
+
+            return ResponseEntity.ok(new SuccessResponse("Thành công", result));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(404).body(new ErrorResponse("Danh mục không tồn tại"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(new ErrorResponse("Đã xảy ra lỗi trong quá trình xử lý: " + e.getMessage()));
         }
     }
 }

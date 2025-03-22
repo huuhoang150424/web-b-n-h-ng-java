@@ -1,6 +1,7 @@
 package com.nhhoang.e_commerce.service;
 
 import com.nhhoang.e_commerce.dto.requests.CreateCategoryRequest;
+import com.nhhoang.e_commerce.dto.requests.UpdateCategoryRequest;
 import com.nhhoang.e_commerce.dto.response.CategoryResponse;
 import com.nhhoang.e_commerce.entity.Category;
 import com.nhhoang.e_commerce.repository.CategoryRepository;
@@ -54,5 +55,19 @@ public class CategoryService {
         response.setImage(category.getImage());
 
         return response;
+    }
+
+    public void updateCategory(String catId, UpdateCategoryRequest request) {
+        Category category = categoryRepository.findById(catId)
+                .orElseThrow(() -> new IllegalArgumentException("Danh mục không tồn tại"));
+
+        if (request.getCategoryName() != null) {
+            category.setCategoryName(request.getCategoryName());
+        }
+        if (request.getImage() != null) {
+            category.setImage(request.getImage());
+        }
+
+        categoryRepository.save(category);
     }
 }
