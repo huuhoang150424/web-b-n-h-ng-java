@@ -1,6 +1,7 @@
 package com.nhhoang.e_commerce.service;
 
 import com.nhhoang.e_commerce.dto.requests.CreateAttributeRequest;
+import com.nhhoang.e_commerce.dto.requests.UpdateAttributeRequest;
 import com.nhhoang.e_commerce.entity.Attributes;
 import com.nhhoang.e_commerce.repository.AttributeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,5 +22,14 @@ public class AttributeService {
         newAttribute.setAttributeName(request.getAttributeName());
 
         attributeRepository.save(newAttribute);
+    }
+
+    public void updateAttribute(String id, UpdateAttributeRequest request) {
+        Attributes attribute = attributeRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Thuộc tính này không tồn tại"));
+
+        attribute.setAttributeName(request.getAttributeName());
+
+        attributeRepository.save(attribute);
     }
 }
