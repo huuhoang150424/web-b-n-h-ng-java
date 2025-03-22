@@ -10,7 +10,12 @@ import com.nhhoang.e_commerce.repository.CategoryRepository;
 import com.nhhoang.e_commerce.repository.ProductAttributesRepository;
 import com.nhhoang.e_commerce.repository.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 public class ProductService {
@@ -59,5 +64,13 @@ public class ProductService {
                 productAttributesRepository.save(productAttribute);
             }
         }
+    }
+
+    public List<Product> getAllProducts() {
+        return productRepository.findAll(Sort.by("id"));
+    }
+
+    public Page<Product> getAllProductsPaginated(int page, int size) {
+        return productRepository.findAll(PageRequest.of(page, size, Sort.by("id")));
     }
 }
