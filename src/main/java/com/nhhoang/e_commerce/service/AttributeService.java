@@ -45,4 +45,12 @@ public class AttributeService {
     public Page<Attributes> getAllAttributesPaginated(int page, int size) {
         return attributeRepository.findAll(PageRequest.of(page, size, Sort.by("id")));
     }
+
+    public void deleteAttribute(String id) {
+        if (!attributeRepository.existsById(id)) {
+            throw new IllegalArgumentException("Thuộc tính không tồn tại");
+        }
+
+        attributeRepository.deleteById(id);
+    }
 }
