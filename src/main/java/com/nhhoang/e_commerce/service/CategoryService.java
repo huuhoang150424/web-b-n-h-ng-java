@@ -1,6 +1,7 @@
 package com.nhhoang.e_commerce.service;
 
 import com.nhhoang.e_commerce.dto.requests.CreateCategoryRequest;
+import com.nhhoang.e_commerce.dto.response.CategoryResponse;
 import com.nhhoang.e_commerce.entity.Category;
 import com.nhhoang.e_commerce.repository.CategoryRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,5 +42,17 @@ public class CategoryService {
                 .orElseThrow(() -> new IllegalArgumentException("Danh mục không tồn tại"));
 
         categoryRepository.delete(category);
+    }
+
+    public CategoryResponse getCategory(String catId) {
+        Category category = categoryRepository.findById(catId)
+                .orElseThrow(() -> new IllegalArgumentException("Danh mục không tồn tại"));
+
+        CategoryResponse response = new CategoryResponse();
+        response.setId(category.getId());
+        response.setCategoryName(category.getCategoryName());
+        response.setImage(category.getImage());
+
+        return response;
     }
 }

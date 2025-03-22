@@ -135,4 +135,25 @@ public class CategoryController {
             return ResponseEntity.status(500).body(new ErrorResponse("Lỗi server: " + e.getMessage()));
         }
     }
+
+    @GetMapping("/getCat/{catId}")
+    public ResponseEntity<?> getCategory(@PathVariable String catId, HttpServletRequest httpRequest) {
+        try {
+            User currentUser = (User) httpRequest.getAttribute("user");
+            if (currentUser == null) {
+                return ResponseEntity.status(403).body(new ErrorResponse("Bạn cần đăng nhập"));
+            }
+
+            CategoryResponse category = categoryService.getCategory(catId);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("data", category);
+
+            return ResponseEntity.ok(new SuccessResponse("Thành công", result));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(404).body(new ErrorResponse("Danh mục không tồn tại"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(new ErrorResponse("Lỗi không xác định"));
+        }
+    }
 }
