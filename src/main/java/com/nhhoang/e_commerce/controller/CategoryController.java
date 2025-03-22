@@ -2,11 +2,14 @@ package com.nhhoang.e_commerce.controller;
 
 import com.nhhoang.e_commerce.dto.Enum.Role;
 import com.nhhoang.e_commerce.dto.requests.CreateCategoryRequest;
+import com.nhhoang.e_commerce.dto.response.CategoryResponse;
+import com.nhhoang.e_commerce.entity.Category;
 import com.nhhoang.e_commerce.entity.User;
 import com.nhhoang.e_commerce.service.CategoryService;
 import com.nhhoang.e_commerce.utils.Api.ErrorResponse;
 import com.nhhoang.e_commerce.utils.Api.SuccessResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
@@ -14,7 +17,9 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/category")
@@ -56,5 +61,54 @@ public class CategoryController {
         }
     }
 
-    
+    @GetMapping("/getAllCat")
+    public ResponseEntity<?> getAllCategories(@RequestParam(required = false) Integer page,
+                                              @RequestParam(required = false) Integer size,
+                                              HttpServletRequest httpRequest) {
+        try {
+            User currentUser = (User) httpRequest.getAttribute("user");
+            if (currentUser == null) {
+                return ResponseEntity.status(403).body(new ErrorResponse("Bạn cần đăng nhập"));
+            }
+
+            Map<String, Object> result = new HashMap<>();
+            List<CategoryResponse> categoryData;
+
+            if (page == null && size == null) {
+                List<Category> allCategories = categoryService.getAllCategories();
+                categoryData = allCategories.stream().map(this::mapToCategoryResponse).collect(Collectors.toList());
+
+                result.put("totalItems", categoryData.size());
+                result.put("currentPage", 1);
+                result.put("totalPages", 1);
+                result.put("pageSize", categoryData.size());
+                result.put("data", categoryData);
+            } else {
+                int pageNum = page != null ? page - 1 : 0; // Spring dùng 0-based index
+                int pageSize = size != null ? size : 10;
+                if (pageSize > 100) pageSize = 100;
+
+                Page<Category> categoryPage = categoryService.getAllCategoriesPaginated(pageNum, pageSize);
+                categoryData = categoryPage.getContent().stream().map(this::mapToCategoryResponse).collect(Collectors.toList());
+
+                result.put("totalItems", categoryPage.getTotalElements());
+                result.put("currentPage", categoryPage.getNumber() + 1); // Chuyển về 1-based
+                result.put("totalPages", categoryPage.getTotalPages());
+                result.put("pageSize", categoryPage.getSize());
+                result.put("data", categoryData);
+            }
+
+            return ResponseEntity.ok(new SuccessResponse("Thành công", result));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(new ErrorResponse("Lỗi server: " + e.getMessage()));
+        }
+    }
+
+    private CategoryResponse mapToCategoryResponse(Category category) {
+        CategoryResponse response = new CategoryResponse();
+        response.setId(category.getId());
+        response.setCategoryName(category.getCategoryName());
+        response.setImage(category.getImage());
+        return response;
+    }
 }
