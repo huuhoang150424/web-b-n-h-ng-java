@@ -5,7 +5,12 @@ import com.nhhoang.e_commerce.dto.requests.UpdateAttributeRequest;
 import com.nhhoang.e_commerce.entity.Attributes;
 import com.nhhoang.e_commerce.repository.AttributeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 public class AttributeService {
@@ -31,5 +36,13 @@ public class AttributeService {
         attribute.setAttributeName(request.getAttributeName());
 
         attributeRepository.save(attribute);
+    }
+
+    public List<Attributes> getAllAttributes() {
+        return attributeRepository.findAll(Sort.by("id"));
+    }
+
+    public Page<Attributes> getAllAttributesPaginated(int page, int size) {
+        return attributeRepository.findAll(PageRequest.of(page, size, Sort.by("id")));
     }
 }
