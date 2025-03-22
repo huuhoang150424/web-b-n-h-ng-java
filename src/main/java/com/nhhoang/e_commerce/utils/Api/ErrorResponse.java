@@ -11,6 +11,7 @@ public class ErrorResponse {
     public ErrorResponse(String errorMessage) {
         this.errorMessage = errorMessage;
     }
+
     public ErrorResponse(String errorMessage, Map<String, String> errors) {
         this.errorMessage = errorMessage;
         this.errors = errors;
