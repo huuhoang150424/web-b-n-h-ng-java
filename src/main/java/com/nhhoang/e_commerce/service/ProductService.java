@@ -1,6 +1,7 @@
 package com.nhhoang.e_commerce.service;
 
 import com.nhhoang.e_commerce.dto.requests.CreateProductRequest;
+import com.nhhoang.e_commerce.dto.response.ProductDetailResponse;
 import com.nhhoang.e_commerce.entity.Attributes;
 import com.nhhoang.e_commerce.entity.Category;
 import com.nhhoang.e_commerce.entity.Product;
@@ -16,6 +17,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class ProductService {
@@ -72,5 +74,43 @@ public class ProductService {
 
     public Page<Product> getAllProductsPaginated(int page, int size) {
         return productRepository.findAll(PageRequest.of(page, size, Sort.by("id")));
+    }
+
+    public ProductDetailResponse getProductBySlug(String slug) {
+        Product product = productRepository.findBySlugWithDetails(slug)
+                .orElseThrow(() -> new IllegalArgumentException("Sản phẩm không tồn tại"));
+
+        ProductDetailResponse response = new ProductDetailResponse();
+        response.setId(product.getId());
+        response.setSlug(product.getSlug());
+        response.setProductName(product.getProductName());
+        response.setPrice(product.getPrice());
+        response.setThumbImage(product.getThumbImage());
+        response.setStock(product.getStock());
+        response.setImageUrls(product.getImageUrls());
+        response.setDescription(product.getDescription());
+        response.setStatus(product.getStatus());
+        response.setCreatedAt(product.getCreatedAt());
+        response.setUpdatedAt(product.getUpdatedAt());
+
+        // Category
+        ProductDetailResponse.CategoryResponse categoryResponse = new ProductDetailResponse.CategoryResponse();
+        categoryResponse.setId(product.getCategory().getId());
+        categoryResponse.setCategoryName(product.getCategory().getCategoryName());
+        categoryResponse.setImage(product.getCategory().getImage());
+        response.setCategory(categoryResponse);
+
+        // Product Attributes
+        response.setProductAttributes(product.getProductAttributes().stream()
+                .map(pa -> {
+                    ProductDetailResponse.ProductAttributeResponse attrResponse = new ProductDetailResponse.ProductAttributeResponse();
+                    attrResponse.setId(pa.getId());
+                    attrResponse.setAttributeName(pa.getAttribute().getAttributeName());
+                    attrResponse.setValue(pa.getValue());
+                    return attrResponse;
+                })
+                .collect(Collectors.toList()));
+
+        return response;
     }
 }

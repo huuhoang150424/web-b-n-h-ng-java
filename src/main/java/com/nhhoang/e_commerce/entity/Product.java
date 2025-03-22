@@ -1,9 +1,11 @@
 package com.nhhoang.e_commerce.entity;
 
 import com.nhhoang.e_commerce.utils.JsonListConverter;
-import lombok.Data;
 import jakarta.persistence.*;
+import lombok.Data;
+
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -44,6 +46,9 @@ public class Product {
     @JoinColumn(name = "category_id")
     private Category category;
 
+    @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private List<ProductAttribute> productAttributes = new ArrayList<>();
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -52,21 +57,11 @@ public class Product {
 
     @PrePersist
     public void prePersist() {
-        if (createdAt == null) {
-            createdAt = LocalDateTime.now();
-        }
-        if (status == null) {
-            status = Status.AVAILABLE;
-        }
-        if (description == null) {
-            description = "";
-        }
-        if (imageUrls == null) {
-            imageUrls = List.of();
-        }
-        if (slug == null) {
-            generateSlug();
-        }
+        if (createdAt == null) createdAt = LocalDateTime.now();
+        if (status == null) status = Status.AVAILABLE;
+        if (description == null) description = "";
+        if (imageUrls == null) imageUrls = List.of();
+        if (slug == null) generateSlug();
     }
 
     @PreUpdate
@@ -74,25 +69,15 @@ public class Product {
         updatedAt = LocalDateTime.now();
     }
 
-    //  genera slug
     private void generateSlug() {
         String baseSlug = productName.toLowerCase().replaceAll("[^a-z0-9]+", "-").replaceAll("-+$", "");
         this.slug = baseSlug;
     }
 
     public enum Status {
-        AVAILABLE("Có sẵn"),
-        OUT_OF_STOCK("Hết hàng"),
-        DISCONTINUED("Ngưng bán");
-
+        AVAILABLE("Có sẵn"), OUT_OF_STOCK("Hết hàng"), DISCONTINUED("Ngưng bán");
         private final String displayName;
-
-        Status(String displayName) {
-            this.displayName = displayName;
-        }
-
-        public String getDisplayName() {
-            return displayName;
-        }
+        Status(String displayName) { this.displayName = displayName; }
+        public String getDisplayName() { return displayName; }
     }
 }

@@ -2,6 +2,7 @@ package com.nhhoang.e_commerce.controller;
 
 import com.nhhoang.e_commerce.dto.Enum.Role;
 import com.nhhoang.e_commerce.dto.requests.CreateProductRequest;
+import com.nhhoang.e_commerce.dto.response.ProductDetailResponse;
 import com.nhhoang.e_commerce.dto.response.ProductResponse;
 import com.nhhoang.e_commerce.entity.Product;
 import com.nhhoang.e_commerce.entity.User;
@@ -123,5 +124,26 @@ public class ProductController {
         response.setCreatedAt(product.getCreatedAt());
         response.setUpdatedAt(product.getUpdatedAt());
         return response;
+    }
+
+    @GetMapping("/getProduct/{slug}")
+    public ResponseEntity<?> getProduct(@PathVariable String slug, HttpServletRequest httpRequest) {
+        try {
+            User currentUser = (User) httpRequest.getAttribute("user");
+            if (currentUser == null) {
+                return ResponseEntity.status(403).body(new ErrorResponse("Bạn cần đăng nhập"));
+            }
+
+            ProductDetailResponse product = productService.getProductBySlug(slug);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("data", product);
+
+            return ResponseEntity.ok(new SuccessResponse("Thành công", result));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(404).body(new ErrorResponse("Sản phẩm không tồn tại"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(new ErrorResponse("Lỗi server: " + e.getMessage()));
+        }
     }
 }
