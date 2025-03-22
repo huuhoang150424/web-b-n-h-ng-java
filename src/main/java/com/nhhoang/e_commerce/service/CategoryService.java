@@ -35,4 +35,11 @@ public class CategoryService {
     public Page<Category> getAllCategoriesPaginated(int page, int size) {
         return categoryRepository.findAll(PageRequest.of(page, size, Sort.by("id")));
     }
+
+    public void deleteCategory(String catId) {
+        Category category = categoryRepository.findById(catId)
+                .orElseThrow(() -> new IllegalArgumentException("Danh mục không tồn tại"));
+
+        categoryRepository.delete(category);
+    }
 }

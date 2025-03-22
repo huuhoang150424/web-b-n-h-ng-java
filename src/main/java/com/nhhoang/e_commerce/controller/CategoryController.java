@@ -111,4 +111,28 @@ public class CategoryController {
         response.setImage(category.getImage());
         return response;
     }
+
+    @DeleteMapping("/deleteCat/{catId}")
+    public ResponseEntity<?> deleteCategory(@PathVariable String catId, HttpServletRequest httpRequest) {
+        try {
+            User currentUser = (User) httpRequest.getAttribute("user");
+            if (currentUser == null) {
+                return ResponseEntity.status(403).body(new ErrorResponse("Bạn cần đăng nhập"));
+            }
+            if (!currentUser.getRole().equals(Role.ADMIN)) {
+                return ResponseEntity.status(403).body(new ErrorResponse("Chỉ ADMIN mới có quyền truy cập"));
+            }
+
+            categoryService.deleteCategory(catId);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("message", "Danh mục đã được xóa thành công");
+
+            return ResponseEntity.ok(new SuccessResponse("Thành công", result));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(404).body(new ErrorResponse("Danh mục không tồn tại"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(new ErrorResponse("Lỗi server: " + e.getMessage()));
+        }
+    }
 }
