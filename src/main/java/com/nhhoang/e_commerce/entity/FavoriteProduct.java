@@ -15,11 +15,11 @@ public class FavoriteProduct {
     private String id = UUID.randomUUID().toString();
 
     @ManyToOne
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id", nullable = true)
     private User user;
 
     @ManyToOne
-    @JoinColumn(name = "product_id")
+    @JoinColumn(name = "product_id", nullable = true)
     private Product product;
 
     @Column(name = "created_at")

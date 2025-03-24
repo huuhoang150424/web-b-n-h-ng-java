@@ -15,7 +15,7 @@ public class Cart {
     private String id = UUID.randomUUID().toString();
 
     @ManyToOne
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id", nullable = true)
     private User user;
 
     @Column(name = "created_at")

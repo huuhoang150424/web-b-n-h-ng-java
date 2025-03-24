@@ -43,11 +43,26 @@ public class Product {
     private Status status;
 
     @ManyToOne
-    @JoinColumn(name = "category_id")
+    @JoinColumn(name = "category_id", nullable = true)
     private Category category;
 
-    @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
     private List<ProductAttribute> productAttributes = new ArrayList<>();
+
+    @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
+    private List<Comment> comments = new ArrayList<>();
+
+    @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
+    private List<Rating> ratings = new ArrayList<>();
+
+    @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
+    private List<FavoriteProduct> favoriteProducts = new ArrayList<>();
+
+    @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
+    private List<CartItem> cartItems = new ArrayList<>();
+
+    @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
+    private List<OrderDetail> orderDetails = new ArrayList<>();
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

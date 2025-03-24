@@ -15,11 +15,11 @@ public class ProductAttribute {
     private String id = UUID.randomUUID().toString();
 
     @ManyToOne
-    @JoinColumn(name = "product_id")
+    @JoinColumn(name = "product_id", nullable = true)
     private Product product;
 
     @ManyToOne
-    @JoinColumn(name = "attribute_id")
+    @JoinColumn(name = "attribute_id", nullable = true)
     private Attributes attribute;
 
     @Column(length = 100)

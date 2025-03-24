@@ -19,11 +19,11 @@ public class OrderHistory {
     private Status status;
 
     @ManyToOne
-    @JoinColumn(name = "order_id")
+    @JoinColumn(name = "order_id", nullable = true)
     private Order order;
 
     @ManyToOne
-    @JoinColumn(name = "change_by")
+    @JoinColumn(name = "change_by", nullable = true)
     private User changeBy;
 
     @Column(name = "changed_at")

@@ -19,11 +19,11 @@ public class OrderDetail {
     private Integer quantity;
 
     @ManyToOne
-    @JoinColumn(name = "order_id")
+    @JoinColumn(name = "order_id", nullable = true)
     private Order order;
 
     @ManyToOne
-    @JoinColumn(name = "product_id")
+    @JoinColumn(name = "product_id", nullable = true)
     private Product product;
 
     @Column(name = "created_at")

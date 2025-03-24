@@ -6,6 +6,7 @@ import lombok.Data;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -52,6 +53,24 @@ public class User {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
+    private List<Cart> carts = new ArrayList<>();
+
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
+    private List<Order> orders = new ArrayList<>();
+
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
+    private List<FavoriteProduct> favoriteProducts = new ArrayList<>();
+
+    @OneToMany(mappedBy = "changeBy", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
+    private List<OrderHistory> orderHistories = new ArrayList<>();
+
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
+    private List<Comment> comments = new ArrayList<>();
+
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
+    private List<Rating> ratings = new ArrayList<>();
 
     @PrePersist
     public void prePersist() {

@@ -3,14 +3,9 @@ package com.nhhoang.e_commerce.service;
 import com.nhhoang.e_commerce.dto.requests.CreateProductRequest;
 import com.nhhoang.e_commerce.dto.requests.UpdateProductRequest;
 import com.nhhoang.e_commerce.dto.response.ProductDetailResponse;
-import com.nhhoang.e_commerce.entity.Attributes;
-import com.nhhoang.e_commerce.entity.Category;
-import com.nhhoang.e_commerce.entity.Product;
-import com.nhhoang.e_commerce.entity.ProductAttribute;
-import com.nhhoang.e_commerce.repository.AttributeRepository;
-import com.nhhoang.e_commerce.repository.CategoryRepository;
-import com.nhhoang.e_commerce.repository.ProductAttributesRepository;
-import com.nhhoang.e_commerce.repository.ProductRepository;
+import com.nhhoang.e_commerce.entity.*;
+import com.nhhoang.e_commerce.repository.*;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -35,6 +30,21 @@ public class ProductService {
 
     @Autowired
     private ProductAttributesRepository productAttributesRepository;
+
+    @Autowired
+    private CommentRepository commentRepository;
+
+    @Autowired
+    private RatingRepository ratingRepository;
+
+    @Autowired
+    private FavoriteProductRepository favoriteProductRepository;
+
+    @Autowired
+    private CartItemRepository cartItemRepository;
+
+    @Autowired
+    private OrderDetailRepository orderDetailRepository;
 
     public void createProduct(CreateProductRequest request) {
         if (productRepository.existsByProductName(request.getProductName())) {
@@ -152,11 +162,41 @@ public class ProductService {
         }
     }
 
+    @Transactional
     public void deleteProduct(String id) {
         if (!productRepository.existsById(id)) {
             throw new IllegalArgumentException("Không tìm thấy sản phẩm");
         }
-
+        List<Comment> comments = commentRepository.findByProductId(id);
+        for (Comment comment : comments) {
+            comment.setProduct(null);
+            commentRepository.save(comment);
+        }
+        List<Rating> ratings = ratingRepository.findByProductId(id);
+        for (Rating rating : ratings) {
+            rating.setProduct(null);
+            ratingRepository.save(rating);
+        }
+        List<ProductAttribute> productAttributes = productAttributesRepository.findByProductId(id);
+        for (ProductAttribute productAttribute : productAttributes) {
+            productAttribute.setProduct(null);
+            productAttributesRepository.save(productAttribute);
+        }
+        List<FavoriteProduct> favoriteProducts = favoriteProductRepository.findByProductId(id);
+        for (FavoriteProduct favoriteProduct : favoriteProducts) {
+            favoriteProduct.setProduct(null);
+            favoriteProductRepository.save(favoriteProduct);
+        }
+        List<CartItem> cartItems = cartItemRepository.findByProductId(id);
+        for (CartItem cartItem : cartItems) {
+            cartItem.setProduct(null);
+            cartItemRepository.save(cartItem);
+        }
+        List<OrderDetail> orderDetails = orderDetailRepository.findByProductId(id);
+        for (OrderDetail orderDetail : orderDetails) {
+            orderDetail.setProduct(null);
+            orderDetailRepository.save(orderDetail);
+        }
         productRepository.deleteById(id);
     }
 }

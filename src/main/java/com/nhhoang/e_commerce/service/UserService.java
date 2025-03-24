@@ -4,8 +4,10 @@ import com.nhhoang.e_commerce.dto.Enum.Role;
 import com.nhhoang.e_commerce.dto.requests.CreateUserRequest;
 import com.nhhoang.e_commerce.dto.requests.UpdateProfileRequest;
 import com.nhhoang.e_commerce.dto.requests.UpdateUserRequest;
-import com.nhhoang.e_commerce.entity.User;
+import com.nhhoang.e_commerce.entity.*;
+import com.nhhoang.e_commerce.repository.*;
 import com.nhhoang.e_commerce.repository.UserRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -28,6 +30,24 @@ public class UserService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private CartRepository cartRepository;
+
+    @Autowired
+    private OrderRepository orderRepository;
+
+    @Autowired
+    private FavoriteProductRepository favoriteProductRepository;
+
+    @Autowired
+    private OrderHistoryRepository orderHistoryRepository;
+
+    @Autowired
+    private CommentRepository commentRepository;
+
+    @Autowired
+    private RatingRepository ratingRepository;
+
     public void updatePhone(String userId, String phone) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("Người dùng không tồn tại"));
@@ -37,8 +57,6 @@ public class UserService {
     public User updateProfile(String userId, UpdateProfileRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("Người dùng không tồn tại"));
-
-        // Cập nhật các trường nếu có trong request
         if (request.getName() != null) {
             user.setName(request.getName());
         }
@@ -110,6 +128,7 @@ public class UserService {
                 .orElseThrow(() -> new IllegalArgumentException("Tài khoản không tồn tại"));
     }
 
+    @Transactional
     public void deleteUser(String id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Người dùng không tồn tại"));
@@ -118,6 +137,38 @@ public class UserService {
             throw new IllegalArgumentException("Không thể xóa Admin");
         }
 
+        List<Cart> carts = cartRepository.findByUserId(id);
+        for (Cart cart : carts) {
+            cart.setUser(null);
+            cartRepository.save(cart);
+        }
+        List<Order> orders = orderRepository.findByUserId(id);
+        for (Order order : orders) {
+            order.setUser(null);
+            orderRepository.save(order);
+        }
+        List<FavoriteProduct> favoriteProducts = favoriteProductRepository.findByUserId(id);
+        for (FavoriteProduct favoriteProduct : favoriteProducts) {
+            favoriteProduct.setUser(null);
+            favoriteProductRepository.save(favoriteProduct);
+        }
+        List<OrderHistory> orderHistories = orderHistoryRepository.findByChangeById(id);
+        for (OrderHistory orderHistory : orderHistories) {
+            orderHistory.setChangeBy(null);
+            orderHistoryRepository.save(orderHistory);
+        }
+        List<Comment> comments = commentRepository.findByUserId(id);
+        for (Comment comment : comments) {
+            comment.setUser(null);
+            commentRepository.save(comment);
+        }
+        List<Rating> ratings = ratingRepository.findByUserId(id);
+        for (Rating rating : ratings) {
+            rating.setUser(null);
+            ratingRepository.save(rating);
+        }
+
+        // Xóa User
         userRepository.delete(user);
     }
     public void updateUser(String id, UpdateUserRequest request) {

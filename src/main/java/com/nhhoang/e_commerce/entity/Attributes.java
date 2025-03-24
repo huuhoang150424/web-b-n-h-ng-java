@@ -3,6 +3,8 @@ package com.nhhoang.e_commerce.entity;
 import lombok.Data;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -22,6 +24,9 @@ public class Attributes {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @OneToMany(mappedBy = "attribute", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
+    private List<ProductAttribute> productAttributes = new ArrayList<>();
 
     @PrePersist
     public void prePersist() {

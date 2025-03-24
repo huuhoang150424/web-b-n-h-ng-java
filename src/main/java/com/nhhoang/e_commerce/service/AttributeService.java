@@ -3,7 +3,10 @@ package com.nhhoang.e_commerce.service;
 import com.nhhoang.e_commerce.dto.requests.CreateAttributeRequest;
 import com.nhhoang.e_commerce.dto.requests.UpdateAttributeRequest;
 import com.nhhoang.e_commerce.entity.Attributes;
+import com.nhhoang.e_commerce.entity.ProductAttribute;
 import com.nhhoang.e_commerce.repository.AttributeRepository;
+import com.nhhoang.e_commerce.repository.ProductAttributesRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -17,6 +20,9 @@ public class AttributeService {
 
     @Autowired
     private AttributeRepository attributeRepository;
+
+    @Autowired
+    private ProductAttributesRepository productAttributeRepository;
 
     public void createAttribute(CreateAttributeRequest request) {
         if (attributeRepository.existsByAttributeName(request.getAttributeName())) {
@@ -46,11 +52,20 @@ public class AttributeService {
         return attributeRepository.findAll(PageRequest.of(page, size, Sort.by("id")));
     }
 
+    @Transactional
     public void deleteAttribute(String id) {
         if (!attributeRepository.existsById(id)) {
             throw new IllegalArgumentException("Thuộc tính không tồn tại");
         }
 
+        // Tìm tất cả ProductAttribute liên quan và đặt attribute thành null
+        List<ProductAttribute> productAttributes = productAttributeRepository.findByAttributeId(id);
+        for (ProductAttribute productAttribute : productAttributes) {
+            productAttribute.setAttribute(null);
+            productAttributeRepository.save(productAttribute);
+        }
+
+        // Xóa Attribute
         attributeRepository.deleteById(id);
     }
 }
