@@ -151,4 +151,12 @@ public class ProductService {
             }
         }
     }
+
+    public void deleteProduct(String id) {
+        if (!productRepository.existsById(id)) {
+            throw new IllegalArgumentException("Không tìm thấy sản phẩm");
+        }
+
+        productRepository.deleteById(id);
+    }
 }
