@@ -2,6 +2,7 @@ package com.nhhoang.e_commerce.controller;
 
 import com.nhhoang.e_commerce.dto.Enum.Role;
 import com.nhhoang.e_commerce.dto.requests.CreateProductRequest;
+import com.nhhoang.e_commerce.dto.requests.UpdateProductRequest;
 import com.nhhoang.e_commerce.dto.response.ProductDetailResponse;
 import com.nhhoang.e_commerce.dto.response.ProductResponse;
 import com.nhhoang.e_commerce.entity.Product;
@@ -142,6 +143,40 @@ public class ProductController {
             return ResponseEntity.ok(new SuccessResponse("Thành công", result));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(404).body(new ErrorResponse("Sản phẩm không tồn tại"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(new ErrorResponse("Lỗi server: " + e.getMessage()));
+        }
+    }
+
+    @PutMapping("/editProduct/{id}")
+    public ResponseEntity<?> updateProduct(@PathVariable String id,
+                                           @Valid @RequestBody UpdateProductRequest request,
+                                           BindingResult bindingResult,
+                                           HttpServletRequest httpRequest) {
+        try {
+            User currentUser = (User) httpRequest.getAttribute("user");
+            if (currentUser == null) {
+                return ResponseEntity.status(403).body(new ErrorResponse("Bạn cần đăng nhập"));
+            }
+            if (!currentUser.getRole().equals(Role.ADMIN)) {
+                return ResponseEntity.status(403).body(new ErrorResponse("Chỉ ADMIN mới có quyền truy cập"));
+            }
+
+            if (bindingResult.hasErrors()) {
+                Map<String, String> errors = new HashMap<>();
+                bindingResult.getFieldErrors().forEach(error ->
+                        errors.put(error.getField(), error.getDefaultMessage()));
+                return ResponseEntity.badRequest().body(new ErrorResponse("Dữ liệu không hợp lệ", errors));
+            }
+
+            productService.updateProduct(id, request);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("message", "Cập nhật sản phẩm thành công");
+
+            return ResponseEntity.ok(new SuccessResponse("Thành công", result));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(404).body(new ErrorResponse(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(new ErrorResponse("Lỗi server: " + e.getMessage()));
         }

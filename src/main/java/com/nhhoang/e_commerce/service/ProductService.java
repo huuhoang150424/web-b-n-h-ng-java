@@ -1,6 +1,7 @@
 package com.nhhoang.e_commerce.service;
 
 import com.nhhoang.e_commerce.dto.requests.CreateProductRequest;
+import com.nhhoang.e_commerce.dto.requests.UpdateProductRequest;
 import com.nhhoang.e_commerce.dto.response.ProductDetailResponse;
 import com.nhhoang.e_commerce.entity.Attributes;
 import com.nhhoang.e_commerce.entity.Category;
@@ -17,6 +18,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -112,5 +114,41 @@ public class ProductService {
                 .collect(Collectors.toList()));
 
         return response;
+    }
+
+    public void updateProduct(String id, UpdateProductRequest request) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Sản phẩm không tồn tại"));
+
+        Category category = categoryRepository.findById(request.getCategoryId())
+                .orElseThrow(() -> new IllegalArgumentException("Danh mục không tồn tại"));
+
+        product.setProductName(request.getProductName());
+        product.setPrice(request.getPrice());
+        product.setThumbImage(request.getThumbImage());
+        product.setStock(request.getStock());
+        product.setImageUrls(request.getImageUrls());
+        product.setCategory(category);
+        product.setDescription(request.getDescription());
+        product.setStatus(request.getStatus());
+
+        productRepository.save(product);
+
+        productAttributesRepository.deleteAll(product.getProductAttributes());
+
+        if (request.getAttributes() != null && !request.getAttributes().isEmpty()) {
+            for (UpdateProductRequest.AttributeData attrData : request.getAttributes()) {
+                Attributes attribute = attributeRepository.findByAttributeName(attrData.getAttributeName())
+                        .orElseThrow(() -> new IllegalArgumentException("Thuộc tính \"" + attrData.getAttributeName() + "\" không tồn tại"));
+
+                ProductAttribute productAttribute = new ProductAttribute();
+                productAttribute.setId(UUID.randomUUID().toString());
+                productAttribute.setProduct(product);
+                productAttribute.setAttribute(attribute);
+                productAttribute.setValue(attrData.getValue());
+
+                productAttributesRepository.save(productAttribute);
+            }
+        }
     }
 }
