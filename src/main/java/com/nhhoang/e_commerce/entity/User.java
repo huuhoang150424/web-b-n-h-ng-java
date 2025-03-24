@@ -117,4 +117,9 @@ public class User {
             return displayName;
         }
     }
+
+    @Override
+    public String toString() {
+        return "User{id='" + id + "', email='" + email + "', role='" + role + "'}";
+    }
 }
