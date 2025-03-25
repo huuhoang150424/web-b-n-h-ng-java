@@ -3,7 +3,9 @@ package com.nhhoang.e_commerce.entity;
 import com.nhhoang.e_commerce.utils.JsonListConverter;
 import jakarta.persistence.*;
 import lombok.Data;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -12,8 +14,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "products")
 @Data
-public class Product {
-
+public class Product implements Serializable {
     @Id
     @Column(length = 36, unique = true, nullable = false)
     private String id = UUID.randomUUID().toString();
@@ -46,21 +47,27 @@ public class Product {
     @JoinColumn(name = "category_id", nullable = true)
     private Category category;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
     private List<ProductAttribute> productAttributes = new ArrayList<>();
 
+    @JsonIgnore
     @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
     private List<Comment> comments = new ArrayList<>();
 
+    @JsonIgnore
     @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
     private List<Rating> ratings = new ArrayList<>();
 
+    @JsonIgnore
     @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
     private List<FavoriteProduct> favoriteProducts = new ArrayList<>();
 
+    @JsonIgnore
     @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
     private List<CartItem> cartItems = new ArrayList<>();
 
+    @JsonIgnore
     @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
     private List<OrderDetail> orderDetails = new ArrayList<>();
 

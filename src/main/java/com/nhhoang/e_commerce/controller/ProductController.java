@@ -3,7 +3,9 @@ package com.nhhoang.e_commerce.controller;
 import com.nhhoang.e_commerce.dto.Enum.Role;
 import com.nhhoang.e_commerce.dto.requests.CreateProductRequest;
 import com.nhhoang.e_commerce.dto.requests.UpdateProductRequest;
+import com.nhhoang.e_commerce.dto.response.ProductAttributeResponse;
 import com.nhhoang.e_commerce.dto.response.ProductDetailResponse;
+import com.nhhoang.e_commerce.dto.response.ProductRecentResponse;
 import com.nhhoang.e_commerce.dto.response.ProductResponse;
 import com.nhhoang.e_commerce.entity.Product;
 import com.nhhoang.e_commerce.entity.User;
@@ -11,6 +13,7 @@ import com.nhhoang.e_commerce.service.ProductService;
 import com.nhhoang.e_commerce.utils.Api.ErrorResponse;
 import com.nhhoang.e_commerce.utils.Api.SuccessResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
@@ -205,4 +208,28 @@ public class ProductController {
             return ResponseEntity.status(500).body(new ErrorResponse("Lỗi server: " + e.getMessage()));
         }
     }
+
+
+
+
+
+    @GetMapping("/getProductRecent")
+    @Cacheable(value = "recentProducts", unless = "#result == null or #result.body == null")
+    public ResponseEntity<?> getProductRecent(HttpServletRequest httpRequest) {
+        try {
+            User currentUser = (User) httpRequest.getAttribute("user");
+            if (currentUser == null) {
+                return ResponseEntity.status(403).body(new ErrorResponse("Bạn cần đăng nhập"));
+            }
+            List<ProductRecentResponse> recentProducts = productService.getRecentProducts();
+            Map<String, Object> result = new HashMap<>();
+            result.put("data", recentProducts);
+
+            return ResponseEntity.ok(new SuccessResponse("Thành công", result));
+
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(new ErrorResponse("Internal Server Error: " + e.getMessage()));
+        }
+    }
+
 }

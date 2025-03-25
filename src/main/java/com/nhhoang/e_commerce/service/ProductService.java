@@ -2,7 +2,10 @@ package com.nhhoang.e_commerce.service;
 
 import com.nhhoang.e_commerce.dto.requests.CreateProductRequest;
 import com.nhhoang.e_commerce.dto.requests.UpdateProductRequest;
+import com.nhhoang.e_commerce.dto.response.CategoryResponse;
+import com.nhhoang.e_commerce.dto.response.ProductAttributeResponse;
 import com.nhhoang.e_commerce.dto.response.ProductDetailResponse;
+import com.nhhoang.e_commerce.dto.response.ProductRecentResponse;
 import com.nhhoang.e_commerce.entity.*;
 import com.nhhoang.e_commerce.repository.*;
 import jakarta.transaction.Transactional;
@@ -198,5 +201,49 @@ public class ProductService {
             orderDetailRepository.save(orderDetail);
         }
         productRepository.deleteById(id);
+    }
+
+    public List<ProductRecentResponse> getRecentProducts() {
+        List<Product> products = productRepository.findAll(
+                PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"))
+        ).getContent();
+
+        return products.stream().map(this::mapToProductResponse).collect(Collectors.toList());
+    }
+
+    private ProductRecentResponse mapToProductResponse(Product product) {
+        ProductRecentResponse response = new ProductRecentResponse();
+        response.setId(product.getId());
+        response.setSlug(product.getSlug());
+        response.setProductName(product.getProductName());
+        response.setPrice(product.getPrice());
+        response.setThumbImage(product.getThumbImage());
+        response.setStock(product.getStock());
+        response.setImageUrls(product.getImageUrls());
+        response.setDescription(product.getDescription());
+        response.setStatus(product.getStatus().name());
+        response.setCreatedAt(product.getCreatedAt());
+        response.setUpdatedAt(product.getUpdatedAt());
+
+        // Map Category
+        if (product.getCategory() != null) {
+            CategoryResponse categoryResponse = new CategoryResponse();
+            categoryResponse.setId(product.getCategory().getId());
+            categoryResponse.setCategoryName(product.getCategory().getCategoryName());
+            response.setCategory(categoryResponse);
+        }
+
+        // Map ProductAttributes
+        response.setProductAttributes(
+                product.getProductAttributes().stream().map(attr -> {
+                    ProductAttributeResponse attrResponse = new ProductAttributeResponse();
+                    attrResponse.setId(attr.getId());
+                    attrResponse.setAttributeName(attr.getAttribute().getAttributeName());
+                    attrResponse.setAttributeValue(attr.getValue());
+                    return attrResponse;
+                }).collect(Collectors.toList())
+        );
+
+        return response;
     }
 }
