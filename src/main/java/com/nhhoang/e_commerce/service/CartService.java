@@ -148,4 +148,14 @@ public class CartService {
         return "Cập nhật giỏ hàng thành công";
     }
 
+
+    @Transactional
+    public String removeAllCart(String userId) {
+        Cart cart = cartRepository.findByUserId(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Giỏ hàng không tồn tại cho người dùng: " + userId));
+        cartItemRepository.deleteByCart(cart);
+
+        return "Xóa tất cả thành công";
+    }
+
 }
