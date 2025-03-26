@@ -96,4 +96,31 @@ public class CartController {
         }
     }
 
+    @DeleteMapping("/removeCart/{cartItemId}")
+    public ResponseEntity<?> removeCart(HttpServletRequest request, @PathVariable String cartItemId) {
+        try {
+            User currentUser = (User) request.getAttribute("user");
+            if (currentUser == null) {
+                logger.warn("User not authenticated for remove cart request");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new ErrorResponse("Bạn cần đăng nhập"));
+            }
+
+            String message = cartService.removeFromCart(currentUser.getId(), cartItemId);
+
+            return ResponseEntity.ok(new SuccessResponse(message, null));
+        } catch (IllegalArgumentException e) {
+            logger.error("Error removing cart item: {}", e.getMessage());
+            if (e.getMessage().contains("không tồn tại")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(new ErrorResponse(e.getMessage()));
+            }
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(new ErrorResponse(e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Error removing cart item: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Lỗi hệ thống: " + e.getMessage()));
+        }
+    }
 }

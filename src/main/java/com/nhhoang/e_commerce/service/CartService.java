@@ -102,7 +102,6 @@ public class CartService {
         response.setId(cartItem.getId());
         response.setQuantity(cartItem.getQuantity());
 
-        // Ánh xạ product
         ProductCartResponse productCartResponse = new ProductCartResponse();
         productCartResponse.setId(cartItem.getProduct().getId());
         productCartResponse.setProductName(cartItem.getProduct().getProductName());
@@ -111,6 +110,20 @@ public class CartService {
         response.setProduct(productCartResponse);
 
         return response;
+    }
+
+    @Transactional
+    public String removeFromCart(String userId, String cartItemId) {
+        logger.info("Removing cart item: {} for user: {}", cartItemId, userId);
+
+        CartItem cartItem = cartItemRepository.findById(cartItemId)
+                .orElseThrow(() -> new IllegalArgumentException("Sản phẩm không tồn tại trong giỏ hàng"));
+
+        if (!cartItem.getCart().getUser().getId().equals(userId)) {
+            throw new IllegalArgumentException("Bạn không có quyền xóa mục này khỏi giỏ hàng");
+        }
+        cartItemRepository.delete(cartItem);
+        return "Xóa thành công";
     }
 
 
