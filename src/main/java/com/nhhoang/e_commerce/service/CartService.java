@@ -126,5 +126,26 @@ public class CartService {
         return "Xóa thành công";
     }
 
+    @Transactional
+    public String updateCart(String userId, String cartItemId, UpdateCartRequest request) {
+        logger.info("Updating cart item: {} for user: {}, new quantity: {}, productId: {}",
+                cartItemId, userId, request.getQuantity(), request.getProductId());
+        if (request.getQuantity() == null || request.getQuantity() <= 0) {
+            throw new IllegalArgumentException("Số lượng không hợp lệ");
+        }
+        Product product = productRepository.findById(request.getProductId())
+                .orElseThrow(() -> new IllegalArgumentException("Sản phẩm không tồn tại"));
+        if (product.getStock() < request.getQuantity()) {
+            throw new IllegalArgumentException("Số lượng không hợp lệ");
+        }
+        CartItem cartItem = cartItemRepository.findById(cartItemId)
+                .orElseThrow(() -> new IllegalArgumentException("Sản phẩm không tồn tại trong giỏ hàng"));
+        if (!cartItem.getCart().getUser().getId().equals(userId)) {
+            throw new IllegalArgumentException("Bạn không có quyền cập nhật mục này trong giỏ hàng");
+        }
+        cartItem.setQuantity(request.getQuantity());
+        cartItemRepository.save(cartItem);
+        return "Cập nhật giỏ hàng thành công";
+    }
 
 }

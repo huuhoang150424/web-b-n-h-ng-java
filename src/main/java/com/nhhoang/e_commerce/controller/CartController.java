@@ -123,4 +123,34 @@ public class CartController {
                     .body(new ErrorResponse("Lỗi hệ thống: " + e.getMessage()));
         }
     }
+
+    @PutMapping("/updateCart/{cartItemId}")
+    public ResponseEntity<?> updateCart(HttpServletRequest request,
+                                        @PathVariable String cartItemId,
+                                        @RequestBody UpdateCartRequest updateCartRequest) {
+        try {
+            User currentUser = (User) request.getAttribute("user");
+            if (currentUser == null) {
+                logger.warn("User not authenticated for update cart request");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new ErrorResponse("Bạn cần đăng nhập"));
+            }
+
+            String message = cartService.updateCart(currentUser.getId(), cartItemId, updateCartRequest);
+
+            return ResponseEntity.ok(new SuccessResponse(message, null));
+        } catch (IllegalArgumentException e) {
+            logger.error("Error updating cart item: {}", e.getMessage());
+            if (e.getMessage().contains("không tồn tại")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(new ErrorResponse(e.getMessage()));
+            }
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse(e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Error updating cart item: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Lỗi hệ thống: " + e.getMessage()));
+        }
+    }
 }
