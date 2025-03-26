@@ -12,6 +12,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+
 @Service
 public class FavoriteProductService {
 
@@ -43,5 +45,23 @@ public class FavoriteProductService {
         FavoriteProduct saved = favoriteProductRepository.save(favoriteProduct);
         logger.info("Successfully added favorite product with id: {}", saved.getId());
         return saved;
+    }
+
+    @Transactional
+    public void removeFavoriteProduct(User user, FavoriteProductRequest request) {
+        logger.info("Removing favorite product for user: {}, productId: {}", user.getId(), request.getProductId());
+
+        // Check if favorite product exists
+        Optional<FavoriteProduct> favoriteProductOpt = favoriteProductRepository.findByUserIdAndProductId(
+                user.getId(), request.getProductId()
+        );
+
+        if (favoriteProductOpt.isPresent()) {
+            favoriteProductRepository.delete(favoriteProductOpt.get());
+            logger.info("Successfully removed favorite product for user: {}, productId: {}", user.getId(), request.getProductId());
+        } else {
+            logger.warn("Favorite product not found for user: {}, productId: {}", user.getId(), request.getProductId());
+            throw new IllegalArgumentException("Sản phẩm yêu thích không tồn tại");
+        }
     }
 }

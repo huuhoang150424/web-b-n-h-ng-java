@@ -60,4 +60,31 @@ public class FavoriteProductController {
                     .body(new ErrorResponse("Internal Server Error: " + e.getMessage()));
         }
     }
+
+    @DeleteMapping("/removeFavoriteProduct")
+    public ResponseEntity<?> removeFavoriteProduct(HttpServletRequest httpRequest,
+                                                   @Valid @RequestBody FavoriteProductRequest request) {
+        try {
+            User currentUser = (User) httpRequest.getAttribute("user");
+            if (currentUser == null) {
+                logger.warn("User not authenticated for removeFavoriteProduct request");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new ErrorResponse("Bạn cần đăng nhập"));
+            }
+
+            favoriteProductService.removeFavoriteProduct(currentUser, request);
+            Map<String, Object> result = new HashMap<>();
+            result.put("message", "Xóa sản phẩm yêu thích thành công");
+
+            return ResponseEntity.ok(new SuccessResponse("Xóa sản phẩm yêu thích thành công", result));
+        } catch (IllegalArgumentException e) {
+            logger.error("Favorite product not found: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ErrorResponse(e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Error removing favorite product: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Internal Server Error: " + e.getMessage()));
+        }
+    }
 }
