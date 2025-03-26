@@ -2,25 +2,29 @@ package com.nhhoang.e_commerce.service;
 
 import com.nhhoang.e_commerce.dto.requests.CreateProductRequest;
 import com.nhhoang.e_commerce.dto.requests.UpdateProductRequest;
-import com.nhhoang.e_commerce.dto.response.CategoryResponse;
-import com.nhhoang.e_commerce.dto.response.ProductAttributeResponse;
-import com.nhhoang.e_commerce.dto.response.ProductDetailResponse;
-import com.nhhoang.e_commerce.dto.response.ProductRecentResponse;
+import com.nhhoang.e_commerce.dto.response.*;
 import com.nhhoang.e_commerce.entity.*;
 import com.nhhoang.e_commerce.repository.*;
 import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.hibernate.Hibernate;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
 public class ProductService {
+    private static final Logger logger = LoggerFactory.getLogger(ProductService.class);
 
     @Autowired
     private ProductRepository productRepository;
@@ -203,47 +207,175 @@ public class ProductService {
         productRepository.deleteById(id);
     }
 
+    @Cacheable(value = "recentProducts", unless = "#result == null or #result.isEmpty()")
     public List<ProductRecentResponse> getRecentProducts() {
-        List<Product> products = productRepository.findAll(
+        logger.info("Fetching recent products");
+        List<Product> products = productRepository.findRecentProducts(
                 PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"))
-        ).getContent();
+        );
 
-        return products.stream().map(this::mapToProductResponse).collect(Collectors.toList());
+        List<ProductRecentResponse> result = products.stream()
+                .map(this::mapToProductResponse)
+                .collect(Collectors.toList());
+        logger.info("Fetched {} recent products", result.size());
+        return result;
     }
 
     private ProductRecentResponse mapToProductResponse(Product product) {
+        logger.info("Mapping product: {}", product.getId());
         ProductRecentResponse response = new ProductRecentResponse();
-        response.setId(product.getId());
-        response.setSlug(product.getSlug());
-        response.setProductName(product.getProductName());
-        response.setPrice(product.getPrice());
-        response.setThumbImage(product.getThumbImage());
-        response.setStock(product.getStock());
-        response.setImageUrls(product.getImageUrls());
-        response.setDescription(product.getDescription());
-        response.setStatus(product.getStatus().name());
-        response.setCreatedAt(product.getCreatedAt());
-        response.setUpdatedAt(product.getUpdatedAt());
+        try {
+            response.setId(product.getId());
+            response.setSlug(product.getSlug());
+            response.setProductName(product.getProductName());
+            response.setPrice(product.getPrice());
+            response.setThumbImage(product.getThumbImage());
+            response.setStock(product.getStock());
+            response.setImageUrls(product.getImageUrls());
+            response.setDescription(product.getDescription());
+            response.setStatus(product.getStatus() != null ? product.getStatus().name() : null);
+            response.setCreatedAt(product.getCreatedAt());
+            response.setUpdatedAt(product.getUpdatedAt());
 
-        // Map Category
-        if (product.getCategory() != null) {
-            CategoryResponse categoryResponse = new CategoryResponse();
-            categoryResponse.setId(product.getCategory().getId());
-            categoryResponse.setCategoryName(product.getCategory().getCategoryName());
-            response.setCategory(categoryResponse);
+            // Map Category
+            if (product.getCategory() != null) {
+                CategoryResponse categoryResponse = new CategoryResponse();
+                categoryResponse.setId(product.getCategory().getId());
+                categoryResponse.setCategoryName(product.getCategory().getCategoryName());
+                response.setCategory(categoryResponse);
+                logger.info("Set category: id={}, name={}", categoryResponse.getId(), categoryResponse.getCategoryName());
+            } else {
+                logger.warn("Category is null for product: {}", product.getId());
+            }
+
+            // Map ProductAttributes
+            if (product.getProductAttributes() != null) {
+                response.setProductAttributes(
+                        product.getProductAttributes().stream().map(attr -> {
+                            ProductAttributeResponse attrResponse = new ProductAttributeResponse();
+                            attrResponse.setId(attr.getId());
+                            if (attr.getAttribute() != null) {
+                                attrResponse.setAttributeName(attr.getAttribute().getAttributeName());
+                            } else {
+                                logger.warn("Attribute is null for product attribute id: {}", attr.getId());
+                                attrResponse.setAttributeName(null);
+                            }
+                            attrResponse.setAttributeValue(attr.getValue());
+                            return attrResponse;
+                        }).collect(Collectors.toList())
+                );
+                logger.info("Set productAttributes: size={}", response.getProductAttributes().size());
+            } else {
+                logger.warn("ProductAttributes is null for product: {}", product.getId());
+                response.setProductAttributes(Collections.emptyList());
+            }
+
+            logger.info("Successfully mapped product: {}", product.getId());
+            return response;
+        } catch (Exception e) {
+            logger.error("Error mapping product {}: {}", product.getId(), e.getMessage(), e);
+            throw e;
         }
+    }
+    public ProductClientResponse getProductClient(String id, User user) {
+        logger.info("Fetching product with id: {}", id);
+        Product product = productRepository.findByIdWithDetails(id)
+                .orElseThrow(() -> new IllegalArgumentException("Product not found"));
 
-        // Map ProductAttributes
-        response.setProductAttributes(
-                product.getProductAttributes().stream().map(attr -> {
-                    ProductAttributeResponse attrResponse = new ProductAttributeResponse();
-                    attrResponse.setId(attr.getId());
-                    attrResponse.setAttributeName(attr.getAttribute().getAttributeName());
-                    attrResponse.setAttributeValue(attr.getValue());
-                    return attrResponse;
-                }).collect(Collectors.toList())
-        );
+        logger.info("Product fetched: id={}, name={}", product.getId(), product.getProductName());
+        return mapToProductResponse(product, user);
+    }
 
-        return response;
+    private ProductClientResponse mapToProductResponse(Product product, User user) {
+        logger.info("Starting mapping product: {}", product.getId());
+        ProductClientResponse response = new ProductClientResponse();
+
+        try {
+            response.setId(product.getId());
+            response.setSlug(product.getSlug());
+            response.setProductName(product.getProductName());
+            response.setPrice(product.getPrice());
+            response.setThumbImage(product.getThumbImage());
+            response.setStock(product.getStock());
+            response.setImageUrls(product.getImageUrls());
+            response.setDescription(product.getDescription());
+            response.setStatus(product.getStatus() != null ? product.getStatus().name() : null);
+            response.setCreatedAt(product.getCreatedAt());
+            response.setUpdatedAt(product.getUpdatedAt());
+
+            // Category
+            if (product.getCategory() != null) {
+                CategoryResponse category = new CategoryResponse();
+                category.setId(product.getCategory().getId());
+                category.setCategoryName(product.getCategory().getCategoryName());
+                category.setImage(product.getCategory().getImage());
+                response.setCategory(category);
+            } else {
+                logger.warn("Category is null for product: {}", product.getId());
+            }
+
+            // Product Attributes
+            if (product.getProductAttributes() != null) {
+                response.setProductAttributes(
+                        product.getProductAttributes().stream().map(attr -> {
+                            ProductAttributeResponse attrResponse = new ProductAttributeResponse();
+                            attrResponse.setId(attr.getId());
+                            if (attr.getAttribute() != null) {
+                                attrResponse.setAttributeName(attr.getAttribute().getAttributeName());
+                            } else {
+                                attrResponse.setAttributeName(null);
+                            }
+                            attrResponse.setAttributeValue(attr.getValue());
+                            return attrResponse;
+                        }).collect(Collectors.toList())
+                );
+            } else {
+                logger.warn("Product attributes are null for product: {}", product.getId());
+                response.setProductAttributes(Collections.emptyList());
+            }
+
+            // Ratings
+            if (product.getRatings() != null) {
+                response.setRatings(
+                        product.getRatings().stream().map(rating -> {
+                            RatingResponse ratingResponse = new RatingResponse();
+                            ratingResponse.setRating(rating.getRating());
+                            ratingResponse.setCreatedAt(rating.getCreatedAt());
+                            if (rating.getUser() != null) {
+                                ratingResponse.setUserInfo(new UserInfoResponse(rating.getUser().getId()));
+                            } else {
+                                ratingResponse.setUserInfo(null);
+                            }
+                            return ratingResponse;
+                        }).collect(Collectors.toList())
+                );
+
+                if (!product.getRatings().isEmpty()) {
+                    double averageRating = product.getRatings().stream()
+                            .mapToDouble(r -> r.getRating())
+                            .average()
+                            .orElse(0.0);
+                    response.setAverageRating(averageRating);
+                } else {
+                    response.setAverageRating(null);
+                }
+            } else {
+                response.setRatings(Collections.emptyList());
+                response.setAverageRating(null);
+            }
+
+            // Is Favorite
+            if (user != null && product != null) {
+                boolean isFavorite = favoriteProductRepository.existsByUserAndProduct(user, product);
+                response.setIsFavorite(isFavorite);
+            } else {
+                response.setIsFavorite(false);
+            }
+
+            return response;
+
+        } catch (Exception e) {
+            throw e;
+        }
     }
 }

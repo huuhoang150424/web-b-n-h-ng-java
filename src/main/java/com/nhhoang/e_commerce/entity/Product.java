@@ -7,9 +7,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Entity
 @Table(name = "products")
@@ -49,27 +47,27 @@ public class Product implements Serializable {
 
     @JsonIgnore
     @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
-    private List<ProductAttribute> productAttributes = new ArrayList<>();
+    private Set<ProductAttribute> productAttributes = new HashSet<>(); // Đổi sang Set
 
     @JsonIgnore
     @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
-    private List<Comment> comments = new ArrayList<>();
+    private Set<Rating> ratings = new HashSet<>();
 
     @JsonIgnore
     @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
-    private List<Rating> ratings = new ArrayList<>();
+    private Set<Comment> comments = new HashSet<>();
 
     @JsonIgnore
     @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
-    private List<FavoriteProduct> favoriteProducts = new ArrayList<>();
+    private Set<FavoriteProduct> favoriteProducts = new HashSet<>();
 
     @JsonIgnore
     @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
-    private List<CartItem> cartItems = new ArrayList<>();
+    private Set<CartItem> cartItems = new HashSet<>();
 
     @JsonIgnore
     @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
-    private List<OrderDetail> orderDetails = new ArrayList<>();
+    private Set<OrderDetail> orderDetails = new HashSet<>();
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

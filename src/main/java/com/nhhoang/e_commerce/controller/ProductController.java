@@ -3,10 +3,7 @@ package com.nhhoang.e_commerce.controller;
 import com.nhhoang.e_commerce.dto.Enum.Role;
 import com.nhhoang.e_commerce.dto.requests.CreateProductRequest;
 import com.nhhoang.e_commerce.dto.requests.UpdateProductRequest;
-import com.nhhoang.e_commerce.dto.response.ProductAttributeResponse;
-import com.nhhoang.e_commerce.dto.response.ProductDetailResponse;
-import com.nhhoang.e_commerce.dto.response.ProductRecentResponse;
-import com.nhhoang.e_commerce.dto.response.ProductResponse;
+import com.nhhoang.e_commerce.dto.response.*;
 import com.nhhoang.e_commerce.entity.Product;
 import com.nhhoang.e_commerce.entity.User;
 import com.nhhoang.e_commerce.service.ProductService;
@@ -18,6 +15,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -29,7 +28,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/product")
 public class ProductController {
-
+    private static final Logger logger = LoggerFactory.getLogger(ProductController.class);
     @Autowired
     private ProductService productService;
 
@@ -209,12 +208,7 @@ public class ProductController {
         }
     }
 
-
-
-
-
     @GetMapping("/getProductRecent")
-    @Cacheable(value = "recentProducts", unless = "#result == null or #result.body == null")
     public ResponseEntity<?> getProductRecent(HttpServletRequest httpRequest) {
         try {
             User currentUser = (User) httpRequest.getAttribute("user");
@@ -232,4 +226,27 @@ public class ProductController {
         }
     }
 
+    @GetMapping("/getProductClient/{id}")
+    @Cacheable(value = "getProductClient", unless = "#result == null or #result.body == null")
+    public ResponseEntity<?> getProductClient(HttpServletRequest httpRequest, @PathVariable String id) {
+        try {
+            User currentUser = (User) httpRequest.getAttribute("user");
+            if (currentUser == null) {
+                logger.warn("Current user is null for request to getProductClient with id: {}", id);
+                return ResponseEntity.status(403).body(new ErrorResponse("Bạn cần đăng nhập"));
+            }
+
+            ProductClientResponse product = productService.getProductClient(id, currentUser);
+            Map<String, Object> result = new HashMap<>();
+            result.put("data", product);
+            logger.info("Successfully processed getProductClient for id: {}", id);
+            return ResponseEntity.ok(new SuccessResponse("Thành công", result));
+        } catch (IllegalArgumentException e) {
+            logger.error("Product not found for id: {}", id, e);
+            return ResponseEntity.status(404).body(new ErrorResponse("Sản phẩm không tồn tại"));
+        } catch (Exception e) {
+            logger.error("Error processing getProductClient for id: {}", id, e);
+            return ResponseEntity.status(500).body(new ErrorResponse("Internal Server Error: " + (e.getMessage() != null ? e.getMessage() : "Unknown error")));
+        }
+    }
 }

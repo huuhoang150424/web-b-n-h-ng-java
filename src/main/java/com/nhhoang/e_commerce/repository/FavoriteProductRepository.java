@@ -1,6 +1,6 @@
 package com.nhhoang.e_commerce.repository;
 
-import com.nhhoang.e_commerce.entity.FavoriteProduct;
+import com.nhhoang.e_commerce.entity.*;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -11,5 +11,7 @@ public interface FavoriteProductRepository extends JpaRepository<FavoriteProduct
     List<FavoriteProduct> findByProductId(String productId);
 
     List<FavoriteProduct> findByUserId(String userId);
+
+    boolean existsByUserAndProduct(User user, Product product);
 
 }
