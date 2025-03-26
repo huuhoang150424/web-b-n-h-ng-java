@@ -12,6 +12,7 @@ import com.nhhoang.e_commerce.utils.Api.SuccessResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
@@ -247,6 +248,35 @@ public class ProductController {
         } catch (Exception e) {
             logger.error("Error processing getProductClient for id: {}", id, e);
             return ResponseEntity.status(500).body(new ErrorResponse("Internal Server Error: " + (e.getMessage() != null ? e.getMessage() : "Unknown error")));
+        }
+    }
+
+    @GetMapping("/similar")
+    public ResponseEntity<?> getSimilarProducts(
+            HttpServletRequest request,
+            @RequestParam(name = "keyword", defaultValue = "") String keyword) {
+        try {
+            User currentUser = (User) request.getAttribute("user");
+            if (currentUser == null) {
+                logger.warn("User not authenticated for similar products request");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new ErrorResponse("Bạn cần đăng nhập"));
+            }
+
+            List<String> similarProducts = productService.findSimilarProducts(keyword);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("data", similarProducts);
+
+            return ResponseEntity.ok(new SuccessResponse("Thành công", result));
+        } catch (IllegalArgumentException e) {
+            logger.error("Invalid request: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse(e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Error fetching similar products: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Lỗi hệ thống: " + e.getMessage()));
         }
     }
 }

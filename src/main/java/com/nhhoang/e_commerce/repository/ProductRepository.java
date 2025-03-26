@@ -6,6 +6,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.awt.print.Pageable;
 import java.util.List;
@@ -34,7 +35,8 @@ public interface ProductRepository extends JpaRepository<Product, String> {
             "ORDER BY p.createdAt DESC")
     List<Product> findRecentProducts(PageRequest pageRequest);
 
-
+    @Query("SELECT p FROM Product p WHERE LOWER(p.productName) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+    List<Product> findByProductNameContainingIgnoreCase(@Param("keyword") String keyword);
 
 
 }

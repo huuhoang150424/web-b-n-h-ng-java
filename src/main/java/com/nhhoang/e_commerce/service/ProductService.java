@@ -5,7 +5,7 @@ import com.nhhoang.e_commerce.dto.requests.UpdateProductRequest;
 import com.nhhoang.e_commerce.dto.response.*;
 import com.nhhoang.e_commerce.entity.*;
 import com.nhhoang.e_commerce.repository.*;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.hibernate.Hibernate;
@@ -377,5 +377,19 @@ public class ProductService {
         } catch (Exception e) {
             throw e;
         }
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> findSimilarProducts(String keyword) {
+        logger.info("Searching for products similar to keyword: {}", keyword);
+
+        if (keyword == null || keyword.trim().isEmpty()) {
+            throw new IllegalArgumentException("Keyword parameter is required");
+        }
+
+        List<Product> products = productRepository.findByProductNameContainingIgnoreCase(keyword.trim());
+        return products.stream()
+                .map(Product::getProductName)
+                .collect(Collectors.toList());
     }
 }
