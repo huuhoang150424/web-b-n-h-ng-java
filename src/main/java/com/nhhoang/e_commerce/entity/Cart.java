@@ -3,6 +3,8 @@ package com.nhhoang.e_commerce.entity;
 import lombok.Data;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -17,6 +19,9 @@ public class Cart {
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = true)
     private User user;
+
+    @OneToMany(mappedBy = "cart", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private List<CartItem> cartItems = new ArrayList<>();
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

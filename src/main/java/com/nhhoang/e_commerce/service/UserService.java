@@ -137,11 +137,11 @@ public class UserService {
             throw new IllegalArgumentException("Không thể xóa Admin");
         }
 
-        List<Cart> carts = cartRepository.findByUserId(id);
-        for (Cart cart : carts) {
+        cartRepository.findByUserId(id).ifPresent(cart -> {
             cart.setUser(null);
             cartRepository.save(cart);
-        }
+        });
+
         List<Order> orders = orderRepository.findByUserId(id);
         for (Order order : orders) {
             order.setUser(null);
