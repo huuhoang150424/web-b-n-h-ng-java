@@ -392,4 +392,53 @@ public class ProductService {
                 .map(Product::getProductName)
                 .collect(Collectors.toList());
     }
+
+    @Transactional(readOnly = true)
+    public SearchResult findProductsByKeyword(String keyword) {
+        logger.info("Searching for products with keyword: {}", keyword);
+
+        String searchKeyword = keyword == null ? "" : keyword.trim().toLowerCase();
+        List<Product> products = productRepository.findByProductNameContainingIgnoreCase(searchKeyword);
+
+        List<ProductSearchResponse> productResponses = products.stream()
+                .map(this::mapToProductSearchResponse)
+                .collect(Collectors.toList());
+
+        List<String> listKeyword = products.stream()
+                .map(Product::getProductName)
+                .collect(Collectors.toList());
+
+        return new SearchResult(productResponses, listKeyword);
+    }
+
+    private ProductSearchResponse mapToProductSearchResponse(Product product) {
+        ProductSearchResponse response = new ProductSearchResponse();
+        response.setId(product.getId());
+        response.setSlug(product.getSlug());
+        response.setProductName(product.getProductName());
+        response.setPrice(product.getPrice());
+        response.setThumbImage(product.getThumbImage());
+        response.setStock(product.getStock());
+        response.setImageUrls(product.getImageUrls());
+        response.setDescription(product.getDescription());
+        response.setStatus(product.getStatus());
+        response.setCreatedAt(product.getCreatedAt());
+        response.setUpdatedAt(product.getUpdatedAt());
+        return response;
+    }
+
+    public static class SearchResult {
+        private final List<ProductSearchResponse> data;
+        private final List<String> keyword;
+        public SearchResult(List<ProductSearchResponse> data, List<String> keyword) {
+            this.data = data;
+            this.keyword = keyword;
+        }
+        public List<ProductSearchResponse> getData() {
+            return data;
+        }
+        public List<String> getKeyword() {
+            return keyword;
+        }
+    }
 }

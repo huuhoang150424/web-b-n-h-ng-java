@@ -279,4 +279,30 @@ public class ProductController {
                     .body(new ErrorResponse("Lỗi hệ thống: " + e.getMessage()));
         }
     }
+
+    @GetMapping("/search")
+    public ResponseEntity<?> searchProducts(
+            HttpServletRequest request,
+            @RequestParam(name = "keyword", defaultValue = "") String keyword) {
+        try {
+            User currentUser = (User) request.getAttribute("user");
+            if (currentUser == null) {
+                logger.warn("User not authenticated for search request");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new ErrorResponse("Bạn cần đăng nhập"));
+            }
+
+            ProductService.SearchResult searchResult = productService.findProductsByKeyword(keyword);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("data", searchResult.getData());
+            result.put("keyword", searchResult.getKeyword());
+
+            return ResponseEntity.ok(new SuccessResponse("Thành công", result));
+        } catch (Exception e) {
+            logger.error("Error searching products: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Lỗi hệ thống: " + e.getMessage()));
+        }
+    }
 }
