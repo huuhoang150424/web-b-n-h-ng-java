@@ -94,4 +94,40 @@ public class CommentController {
                     .body(new ErrorResponse("Lỗi hệ thống: " + e.getMessage()));
         }
     }
+
+
+    @PatchMapping("/updateComment/{id}")
+    public ResponseEntity<?> updateComment(
+            HttpServletRequest request,
+            @PathVariable String id,
+            @Valid @RequestBody CommentUpdateRequest commentRequest) {
+        try {
+            User currentUser = (User) request.getAttribute("user");
+            if (currentUser == null) {
+                logger.warn("User not authenticated for update comment request");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new ErrorResponse("Bạn cần đăng nhập"));
+            }
+
+            CommentResponse updatedComment = commentService.updateComment(currentUser, id, commentRequest);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("data", updatedComment);
+            result.put("message", "Cập nhật thành công");
+
+            return ResponseEntity.ok(new SuccessResponse("Thành công", result));
+        } catch (IllegalArgumentException e) {
+            logger.error("Invalid request: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse(e.getMessage()));
+        } catch (IllegalStateException e) {
+            logger.error("Permission denied: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(new ErrorResponse(e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Error updating comment {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Lỗi hệ thống: " + e.getMessage()));
+        }
+    }
 }

@@ -68,4 +68,37 @@ public class CommentService {
 
         return response;
     }
+
+    @Transactional
+    public CommentResponse updateComment(User user, String commentId, CommentUpdateRequest commentRequest) {
+        logger.info("User {} is updating comment {}", user.getId(), commentId);
+
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy bình luận với ID: " + commentId));
+
+        if (!comment.getUser().getId().equals(user.getId())) {
+            throw new IllegalStateException("Bạn không có quyền cập nhật bình luận này.");
+        }
+
+        comment.setComment(commentRequest.getComment());
+        commentRepository.save(comment);
+
+        return mapToCommentResponse1(comment);
+    }
+
+    private CommentResponse mapToCommentResponse1(Comment comment) {
+        CommentResponse response = new CommentResponse();
+        response.setId(comment.getId());
+        response.setComment(comment.getComment());
+        response.setCreatedAt(comment.getCreatedAt());
+
+        UserInfoCommentResponse userInfo = new UserInfoCommentResponse();
+        userInfo.setId(comment.getUser().getId());
+        userInfo.setName(comment.getUser().getName());
+        userInfo.setEmail(comment.getUser().getEmail());
+        userInfo.setAvatar(comment.getUser().getAvatar());
+        response.setUserInfo(userInfo);
+
+        return response;
+    }
 }
