@@ -1,5 +1,6 @@
 package com.nhhoang.e_commerce.controller;
 
+import com.nhhoang.e_commerce.dto.Enum.Role;
 import com.nhhoang.e_commerce.dto.requests.*;
 import com.nhhoang.e_commerce.entity.User;
 import com.nhhoang.e_commerce.service.RatingService;
@@ -52,6 +53,39 @@ public class RatingController {
                     .body(new ErrorResponse(e.getMessage()));
         } catch (Exception e) {
             logger.error("Error rating product: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Lỗi hệ thống: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/getAllReview")
+    public ResponseEntity<?> getProductReviews(
+            HttpServletRequest request,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false, name = "size") Integer size) {
+        try {
+            User currentUser = (User) request.getAttribute("user");
+            if (currentUser == null) {
+                logger.warn("User not authenticated for get reviews request");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new ErrorResponse("Bạn cần đăng nhập"));
+            }
+            if (currentUser.getRole() != Role.ADMIN) {
+                logger.warn("User {} is not authorized to access reviews", currentUser.getId());
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new ErrorResponse("Chỉ admin mới có quyền truy cập"));
+            }
+            RatingService.ReviewResult result = ratingService.getProductReviews(page, size);
+            Map<String, Object> response = new HashMap<>();
+            response.put("totalItems", result.getTotalItems());
+            response.put("currentPage", result.getCurrentPage());
+            response.put("totalPages", result.getTotalPages());
+            response.put("pageSize", result.getPageSize());
+            response.put("data", result.getData());
+
+            return ResponseEntity.ok(new SuccessResponse("Thành công", response));
+        } catch (Exception e) {
+            logger.error("Error fetching product reviews: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ErrorResponse("Lỗi hệ thống: " + e.getMessage()));
         }
