@@ -130,4 +130,38 @@ public class CommentController {
                     .body(new ErrorResponse("Lỗi hệ thống: " + e.getMessage()));
         }
     }
+
+
+    @DeleteMapping("/deleteComment/{id}")
+    public ResponseEntity<?> deleteComment(
+            HttpServletRequest request,
+            @PathVariable String id) {
+        try {
+            User currentUser = (User) request.getAttribute("user");
+            if (currentUser == null) {
+                logger.warn("User not authenticated for delete comment request");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new ErrorResponse("Bạn cần đăng nhập"));
+            }
+
+            String message = commentService.deleteComment(currentUser, id);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("message", message);
+
+            return ResponseEntity.ok(new SuccessResponse("Thành công", result));
+        } catch (IllegalArgumentException e) {
+            logger.error("Invalid request: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ErrorResponse(e.getMessage()));
+        } catch (IllegalStateException e) {
+            logger.error("Permission denied: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(new ErrorResponse(e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Error deleting comment {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Lỗi hệ thống: " + e.getMessage()));
+        }
+    }
 }

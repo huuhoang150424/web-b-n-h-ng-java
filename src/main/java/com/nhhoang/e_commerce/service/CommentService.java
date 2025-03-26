@@ -101,4 +101,16 @@ public class CommentService {
 
         return response;
     }
+
+    @Transactional
+    public String deleteComment(User user, String commentId) {
+        logger.info("User {} is attempting to delete comment {}", user.getId(), commentId);
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new IllegalArgumentException("Bình luận không tồn tại"));
+        if (!comment.getUser().getId().equals(user.getId())) {
+            throw new IllegalStateException("Bạn không thể xóa bình luận của người khác");
+        }
+        commentRepository.delete(comment);
+        return "Xóa bình luận thành công.";
+    }
 }
