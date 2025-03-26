@@ -441,4 +441,47 @@ public class ProductService {
             return keyword;
         }
     }
+
+    @Transactional(readOnly = true)
+    public List<ProductByCategoryResponse> getProductsByCategory(String categoryId) {
+        logger.info("Fetching products for category: {}", categoryId);
+
+        List<Product> products = productRepository.findByCategoryId(categoryId);
+        return products.stream()
+                .map(this::mapToProductByCategoryResponse)
+                .collect(Collectors.toList());
+    }
+
+    private ProductByCategoryResponse mapToProductByCategoryResponse(Product product) {
+        ProductByCategoryResponse response = new ProductByCategoryResponse();
+        response.setId(product.getId());
+        response.setSlug(product.getSlug());
+        response.setProductName(product.getProductName());
+        response.setPrice(product.getPrice());
+        response.setThumbImage(product.getThumbImage());
+        response.setStock(product.getStock());
+        response.setImageUrls(product.getImageUrls());
+        response.setDescription(product.getDescription());
+        response.setStatus(product.getStatus());
+        response.setCreatedAt(product.getCreatedAt());
+        response.setUpdatedAt(product.getUpdatedAt());
+
+        // Ánh xạ category
+        CategoryResponse categoryResponse = new CategoryResponse();
+        categoryResponse.setId(product.getCategory().getId());
+        response.setCategory(categoryResponse);
+
+        // Ánh xạ product_attributes
+        response.setProductAttributes(product.getProductAttributes().stream()
+                .map(attr -> {
+                    ProductAttributeResponse attrResponse = new ProductAttributeResponse();
+                    attrResponse.setId(attr.getId());
+                    attrResponse.setAttributeName(attr.getAttribute().getAttributeName());
+                    attrResponse.setAttributeValue(attr.getValue());
+                    return attrResponse;
+                })
+                .collect(Collectors.toList()));
+
+        return response;
+    }
 }
