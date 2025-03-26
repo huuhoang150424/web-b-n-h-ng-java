@@ -1,5 +1,6 @@
 package com.nhhoang.e_commerce.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.nhhoang.e_commerce.entity.Product;
 import lombok.Data;
 
@@ -18,6 +19,10 @@ public class ProductResponse {
     private String description;
     private Product.Status status;
     private String categoryId;
+
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDateTime createdAt;
+
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDateTime updatedAt;
 }

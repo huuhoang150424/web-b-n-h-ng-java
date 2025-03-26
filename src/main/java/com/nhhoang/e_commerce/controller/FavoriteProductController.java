@@ -1,6 +1,7 @@
 package com.nhhoang.e_commerce.controller;
 
-import com.nhhoang.e_commerce.dto.requests.FavoriteProductRequest;
+import com.nhhoang.e_commerce.dto.requests.*;
+import com.nhhoang.e_commerce.dto.response.*;
 import com.nhhoang.e_commerce.entity.FavoriteProduct;
 import com.nhhoang.e_commerce.entity.User;
 import com.nhhoang.e_commerce.service.FavoriteProductService;
@@ -17,6 +18,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -83,6 +85,28 @@ public class FavoriteProductController {
                     .body(new ErrorResponse(e.getMessage()));
         } catch (Exception e) {
             logger.error("Error removing favorite product: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Internal Server Error: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/getAllFavoriteProduct")
+    public ResponseEntity<?> getAllFavoriteProducts(HttpServletRequest httpRequest) {
+        try {
+            User currentUser = (User) httpRequest.getAttribute("user");
+            if (currentUser == null) {
+                logger.warn("User not authenticated for getAllFavoriteProducts request");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new ErrorResponse("Bạn cần đăng nhập"));
+            }
+
+            List<FavoriteProductResponse> favoriteProducts = favoriteProductService.getAllFavoriteProducts(currentUser);
+            Map<String, Object> result = new HashMap<>();
+            result.put("data", favoriteProducts);
+
+            return ResponseEntity.ok(new SuccessResponse("Thành công", result));
+        } catch (Exception e) {
+            logger.error("Error fetching favorite products: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ErrorResponse("Internal Server Error: " + e.getMessage()));
         }

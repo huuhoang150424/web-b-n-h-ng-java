@@ -1,6 +1,7 @@
 
 package com.nhhoang.e_commerce.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.nhhoang.e_commerce.dto.Enum.Role;
 import com.nhhoang.e_commerce.entity.User.Gender;
 import lombok.Data;
@@ -18,5 +19,7 @@ public class GetUserResponse {
     private Role role;
     private List<String> address;
     private String phone;
+
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDate birthDate;
 }

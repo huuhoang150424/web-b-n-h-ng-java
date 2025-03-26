@@ -1,18 +1,22 @@
 package com.nhhoang.e_commerce.service;
 
 import com.nhhoang.e_commerce.dto.requests.*;
+import com.nhhoang.e_commerce.dto.response.*;
 import com.nhhoang.e_commerce.entity.FavoriteProduct;
 import com.nhhoang.e_commerce.entity.Product;
+import com.nhhoang.e_commerce.entity.ProductAttribute;
 import com.nhhoang.e_commerce.entity.User;
-import com.nhhoang.e_commerce.repository.FavoriteProductRepository;
-import com.nhhoang.e_commerce.repository.ProductRepository;
+import com.nhhoang.e_commerce.repository.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class FavoriteProductService {
@@ -63,5 +67,61 @@ public class FavoriteProductService {
             logger.warn("Favorite product not found for user: {}, productId: {}", user.getId(), request.getProductId());
             throw new IllegalArgumentException("Sản phẩm yêu thích không tồn tại");
         }
+    }
+
+    @Transactional(readOnly = true)
+    public List<FavoriteProductResponse> getAllFavoriteProducts(User user) {
+        logger.info("Fetching all favorite products for user: {}", user.getId());
+        List<FavoriteProduct> favoriteProducts = favoriteProductRepository.findByUserIds(user.getId());
+
+        List<FavoriteProductResponse> responses = new ArrayList<>();
+        for (FavoriteProduct fp : favoriteProducts) {
+            responses.add(mapToFavoriteProductResponse(fp));
+        }
+        return responses;
+    }
+
+    private FavoriteProductResponse mapToFavoriteProductResponse(FavoriteProduct favoriteProduct) {
+        FavoriteProductResponse response = new FavoriteProductResponse();
+        response.setId(favoriteProduct.getId());
+        response.setUserId(favoriteProduct.getUser().getId());
+        response.setProduct(mapToProductResponse(favoriteProduct.getProduct()));
+        return response;
+    }
+
+    private ProductFavoriteResponse mapToProductResponse(Product product) {
+        ProductFavoriteResponse response = new ProductFavoriteResponse();
+        response.setId(product.getId());
+        response.setSlug(product.getSlug());
+        response.setProductName(product.getProductName());
+        response.setPrice(product.getPrice() != null ? product.getPrice().floatValue() : null);
+        response.setThumbImage(product.getThumbImage());
+        response.setStock(product.getStock());
+        response.setImageUrls(product.getImageUrls());
+        response.setDescription(product.getDescription());
+        response.setStatus(product.getStatus());
+        response.setCreatedAt(product.getCreatedAt());
+        response.setUpdatedAt(product.getUpdatedAt());
+
+        if (product.getCategory() != null) {
+            CategoryResponse categoryResponse = new CategoryResponse();
+            categoryResponse.setId(product.getCategory().getId());
+            categoryResponse.setCategoryName(product.getCategory().getCategoryName());
+            response.setCategory(categoryResponse);
+        }
+
+        if (product.getProductAttributes() != null) {
+            List<ProductAttributeResponse> attributes = new ArrayList<>();
+            for (ProductAttribute attr : product.getProductAttributes()) {
+                ProductAttributeResponse attrResponse = new ProductAttributeResponse();
+                attrResponse.setId(attr.getId());
+                attrResponse.setAttributeName(attr.getAttribute() != null ? attr.getAttribute().getAttributeName() : null);
+                attrResponse.setAttributeValue(attr.getValue());
+                attributes.add(attrResponse);
+            }
+            response.setProductAttributes(attributes);
+        }
+
+        return response;
     }
 }

@@ -100,4 +100,17 @@ public class Product implements Serializable {
         Status(String displayName) { this.displayName = displayName; }
         public String getDisplayName() { return displayName; }
     }
+
+    @Override
+    public int hashCode() {
+        return id != null ? id.hashCode() : 0;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Product product = (Product) o;
+        return id != null && id.equals(product.id);
+    }
 }
