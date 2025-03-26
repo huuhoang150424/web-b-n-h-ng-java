@@ -4,7 +4,7 @@ import com.nhhoang.e_commerce.entity.*;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
+import java.util.*;
 
 @Repository
 public interface FavoriteProductRepository extends JpaRepository<FavoriteProduct, String> {
@@ -14,4 +14,6 @@ public interface FavoriteProductRepository extends JpaRepository<FavoriteProduct
 
     boolean existsByUserAndProduct(User user, Product product);
 
+    Optional<FavoriteProduct> findByUserIdAndProductId(String userId, String productId);
+    boolean existsByUserIdAndProductId(String userId, String productId);
 }
