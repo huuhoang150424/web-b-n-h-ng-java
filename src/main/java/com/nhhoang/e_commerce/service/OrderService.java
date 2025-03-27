@@ -208,4 +208,44 @@ public class OrderService {
 
         return response;
     }
+
+    public List<OrderByUserResponse> getOrdersByUser(String userId) {
+        List<Order> orders = orderRepository.findByUserId(userId);
+        return orders.stream()
+                .map(this::mapToOrderByUserResponse)
+                .collect(Collectors.toList());
+    }
+
+    private OrderByUserResponse mapToOrderByUserResponse(Order order) {
+        OrderByUserResponse response = new OrderByUserResponse();
+        response.setId(order.getId());
+        response.setTotalAmount(order.getTotalAmount());
+        response.setStatus(order.getStatus().name());
+        response.setCreatedAt(order.getCreatedAt());
+        response.setShippingAddress(order.getShippingAddress());
+        response.setReceiverName(order.getReceiverName());
+        response.setReceiverPhone(order.getReceiverPhone());
+        response.setOrderCode(order.getOrderCode());
+
+        List<OrderByUserResponse.OrderDetailResponse> orderDetails = order.getOrderDetails().stream()
+                .map(detail -> {
+                    OrderByUserResponse.OrderDetailResponse detailResponse = new OrderByUserResponse.OrderDetailResponse();
+                    detailResponse.setId(detail.getId());
+                    detailResponse.setQuantity(detail.getQuantity());
+                    detailResponse.setPrice(detail.getPrice());
+
+                    OrderByUserResponse.OrderDetailResponse.ProductResponse productResponse = new OrderByUserResponse.OrderDetailResponse.ProductResponse();
+                    productResponse.setId(detail.getProduct().getId());
+                    productResponse.setProductName(detail.getProduct().getProductName());
+                    productResponse.setPrice(detail.getProduct().getPrice());
+                    productResponse.setThumbImage(detail.getProduct().getThumbImage());
+                    detailResponse.setProduct(productResponse);
+
+                    return detailResponse;
+                })
+                .collect(Collectors.toList());
+        response.setOrderDetails(orderDetails);
+
+        return response;
+    }
 }
