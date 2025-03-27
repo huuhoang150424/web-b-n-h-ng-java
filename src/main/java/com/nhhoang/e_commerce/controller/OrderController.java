@@ -287,4 +287,33 @@ public class OrderController {
         }
     }
 
+    @GetMapping("/getOrderReceived")
+    public ResponseEntity<?> getOrderReceived(HttpServletRequest request) {
+        try {
+            User currentUser = (User) request.getAttribute("user");
+            if (currentUser == null) {
+                logger.warn("User not authenticated for get received orders request");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new ErrorResponse("Bạn cần đăng nhập"));
+            }
+
+            List<OrderHistoryByUserResponse> receivedOrders = orderService.getReceivedOrders(currentUser.getId());
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("message", "Thành công");
+            result.put("data", receivedOrders);
+
+            return ResponseEntity.status(HttpStatus.OK)
+                    .body(new SuccessResponse("Thành công", result));
+        } catch (IllegalArgumentException e) {
+            logger.error("Error fetching received orders: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse(e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Error fetching received orders: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Lỗi hệ thống: " + e.getMessage()));
+        }
+    }
+
 }
