@@ -283,4 +283,35 @@ public class OrderService {
         newHistory.setChangedAt(LocalDateTime.now());
         orderHistoryRepository.save(newHistory);
     }
+
+    @Transactional
+    public void cancelOrder(String orderId, User currentUser) {
+        Order order = orderRepository.findByIdAndUserId(orderId, currentUser.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Đơn hàng không tồn tại hoặc bạn không có quyền hủy đơn này"));
+
+        if (order.getStatus().equals(Order.Status.CONFIRMED)) {
+            throw new IllegalArgumentException("Đơn hàng đã được xác nhận, không thể hủy");
+        }
+
+        boolean isCancelled = orderHistoryRepository.existsByOrderIdAndStatus(orderId, OrderHistory.Status.CANCELLED);
+        if (order.getStatus().equals(Order.Status.NOT_CONFIRMED) && isCancelled) {
+            throw new IllegalArgumentException("Đơn hàng đã bị hủy trước đó");
+        }
+
+        OrderHistory currentHistory = orderHistoryRepository.findFirstByOrderIdAndStatusOrderByChangedAtDesc(
+                orderId, OrderHistory.Status.PROCESSING);
+        if (currentHistory != null) {
+            currentHistory.setEndTime(LocalDateTime.now());
+            orderHistoryRepository.save(currentHistory);
+        }
+
+        OrderHistory newHistory = new OrderHistory();
+        newHistory.setId(UUID.randomUUID().toString());
+        newHistory.setStatus(OrderHistory.Status.CANCELLED);
+        newHistory.setOrder(order);
+        newHistory.setChangeBy(currentUser);
+        newHistory.setChangedAt(LocalDateTime.now());
+        orderHistoryRepository.save(newHistory);
+    }
+
 }
