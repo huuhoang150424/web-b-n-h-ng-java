@@ -349,4 +349,70 @@ public class OrderService {
         orderHistoryRepository.save(newHistory);
     }
 
+    public List<OrderHistoryByUserResponse> getCancelledOrders(String userId) {
+        List<OrderHistory> cancelledOrders = orderHistoryRepository.findByOrderUserIdAndStatusAndEndTimeIsNull(
+                userId, OrderHistory.Status.CANCELLED);
+        return cancelledOrders.stream()
+                .map(this::mapToOrderHistoryByUserResponse)
+                .collect(Collectors.toList());
+    }
+
+    private OrderHistoryByUserResponse mapToOrderHistoryByUserResponse(OrderHistory history) {
+        OrderHistoryByUserResponse response = new OrderHistoryByUserResponse();
+        response.setId(history.getId());
+        response.setStatus(history.getStatus().name());
+        response.setChangedAt(history.getChangedAt());
+        response.setEndTime(history.getEndTime());
+
+        Order order = history.getOrder();
+        if (order != null) {
+            OrderHistoryByUserResponse.OrderResponse orderResponse = new OrderHistoryByUserResponse.OrderResponse();
+            orderResponse.setId(order.getId());
+            orderResponse.setTotalAmount(order.getTotalAmount());
+            orderResponse.setStatus(order.getStatus().name());
+            orderResponse.setCreatedAt(order.getCreatedAt());
+            orderResponse.setShippingAddress(order.getShippingAddress());
+            orderResponse.setReceiverName(order.getReceiverName());
+            orderResponse.setReceiverPhone(order.getReceiverPhone());
+            orderResponse.setOrderCode(order.getOrderCode());
+
+            List<OrderHistoryByUserResponse.OrderDetailResponse> orderDetails = order.getOrderDetails().stream()
+                    .map(this::mapToOrderDetailResponse)
+                    .collect(Collectors.toList());
+            orderResponse.setOrderDetails(orderDetails);
+
+            response.setOrder(orderResponse);
+        }
+
+        return response;
+    }
+
+    private OrderHistoryByUserResponse.OrderDetailResponse mapToOrderDetailResponse(OrderDetail detail) {
+        OrderHistoryByUserResponse.OrderDetailResponse detailResponse = new OrderHistoryByUserResponse.OrderDetailResponse();
+        detailResponse.setId(detail.getId());
+        detailResponse.setQuantity(detail.getQuantity());
+        detailResponse.setPrice(detail.getPrice());
+
+        Product product = detail.getProduct();
+        if (product != null) {
+            OrderHistoryByUserResponse.ProductResponse productResponse = new OrderHistoryByUserResponse.ProductResponse();
+            productResponse.setProductName(product.getProductName());
+            productResponse.setPrice(product.getPrice());
+            productResponse.setThumbImage(product.getThumbImage());
+            productResponse.setStock(product.getStock());
+
+            if (product.getCategory() != null) {
+                OrderHistoryByUserResponse.CategoryResponse categoryResponse = new OrderHistoryByUserResponse.CategoryResponse();
+                categoryResponse.setId(product.getCategory().getId());
+                categoryResponse.setCategoryName(product.getCategory().getCategoryName());
+                categoryResponse.setImage(product.getCategory().getImage());
+                productResponse.setCategory(categoryResponse);
+            }
+
+            detailResponse.setProduct(productResponse);
+        }
+
+        return detailResponse;
+    }
+
 }
