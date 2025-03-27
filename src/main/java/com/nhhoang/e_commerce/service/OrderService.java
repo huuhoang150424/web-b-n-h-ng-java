@@ -314,4 +314,39 @@ public class OrderService {
         orderHistoryRepository.save(newHistory);
     }
 
+    @Transactional
+    public void receiveOrder(String orderId, User currentUser) {
+        Order order = orderRepository.findByIdAndUserId(orderId, currentUser.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Đơn hàng không tồn tại hoặc bạn không có quyền xác nhận đơn này"));
+
+        if (order.getStatus().equals(Order.Status.NOT_CONFIRMED)) {
+            throw new IllegalArgumentException("Đơn hàng chưa được xác nhận");
+        }
+
+        boolean isShipped = orderHistoryRepository.existsByOrderIdAndStatus(orderId, OrderHistory.Status.SHIPPED);
+        if (!isShipped) {
+            throw new IllegalArgumentException("Đơn hàng chưa được giao");
+        }
+
+        boolean isReceived = orderHistoryRepository.existsByOrderIdAndStatus(orderId, OrderHistory.Status.RECEIVED);
+        if (isReceived) {
+            throw new IllegalArgumentException("Đơn hàng đã được xác nhận là 'Đã nhận hàng' trước đó");
+        }
+
+        OrderHistory currentHistory = orderHistoryRepository.findFirstByOrderIdAndStatusOrderByChangedAtDesc(
+                orderId, OrderHistory.Status.SHIPPED);
+        if (currentHistory != null) {
+            currentHistory.setEndTime(LocalDateTime.now());
+            orderHistoryRepository.save(currentHistory);
+        }
+
+        OrderHistory newHistory = new OrderHistory();
+        newHistory.setId(UUID.randomUUID().toString());
+        newHistory.setStatus(OrderHistory.Status.RECEIVED);
+        newHistory.setOrder(order);
+        newHistory.setChangeBy(currentUser);
+        newHistory.setChangedAt(LocalDateTime.now());
+        orderHistoryRepository.save(newHistory);
+    }
+
 }

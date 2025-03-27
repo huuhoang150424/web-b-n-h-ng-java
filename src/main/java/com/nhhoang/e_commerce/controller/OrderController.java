@@ -171,4 +171,32 @@ public class OrderController {
                     .body(new ErrorResponse("Lỗi hệ thống: " + e.getMessage()));
         }
     }
+
+    @PutMapping("/received/{id}")
+    public ResponseEntity<?> receivedOrder(HttpServletRequest request, @PathVariable String id) {
+        try {
+            User currentUser = (User) request.getAttribute("user");
+            if (currentUser == null) {
+                logger.warn("User not authenticated for receive order request");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new ErrorResponse("Bạn cần đăng nhập"));
+            }
+
+            orderService.receiveOrder(id, currentUser);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("message", "Xác nhận đã nhận hàng thành công");
+
+            return ResponseEntity.status(HttpStatus.OK)
+                    .body(new SuccessResponse("Thành công", result));
+        } catch (IllegalArgumentException e) {
+            logger.error("Error receiving order: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse(e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Error receiving order: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Lỗi hệ thống: " + e.getMessage()));
+        }
+    }
 }
