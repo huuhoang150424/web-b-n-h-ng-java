@@ -649,4 +649,26 @@ public class OrderService {
 
         return response;
     }
+
+    public List<ListOrderChangeResponse> getOrderChanges(String orderId) {
+        List<OrderHistory> orderHistories = orderHistoryRepository.findByOrderId(orderId);
+        return orderHistories.stream()
+                .map(this::mapToListOrderChangeResponse)
+                .collect(Collectors.toList());
+    }
+
+    private ListOrderChangeResponse mapToListOrderChangeResponse(OrderHistory history) {
+        ListOrderChangeResponse response = new ListOrderChangeResponse();
+        response.setId(history.getId());
+        response.setStatus(history.getStatus().getDisplayName());
+        response.setChangedAt(history.getChangedAt());
+
+        if (history.getChangeBy() != null) {
+            ListOrderChangeResponse.UserResponse userResponse = new ListOrderChangeResponse.UserResponse();
+            userResponse.setName(history.getChangeBy().getName());
+            userResponse.setAvatar(history.getChangeBy().getAvatar());
+            response.setChangeBy(userResponse);
+        }
+        return response;
+    }
 }

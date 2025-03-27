@@ -15,4 +15,6 @@ public interface OrderHistoryRepository extends JpaRepository<OrderHistory, Stri
     OrderHistory findFirstByOrderIdAndStatusOrderByChangedAtDesc(String orderId, OrderHistory.Status status);
 
     List<OrderHistory> findByOrderUserIdAndStatusAndEndTimeIsNull(String userId, OrderHistory.Status status);
+
+    List<OrderHistory> findByOrderId(String orderId);
 }
