@@ -466,12 +466,10 @@ public class ProductService {
         response.setCreatedAt(product.getCreatedAt());
         response.setUpdatedAt(product.getUpdatedAt());
 
-        // Ánh xạ category
         CategoryResponse categoryResponse = new CategoryResponse();
         categoryResponse.setId(product.getCategory().getId());
         response.setCategory(categoryResponse);
 
-        // Ánh xạ product_attributes
         response.setProductAttributes(product.getProductAttributes().stream()
                 .map(attr -> {
                     ProductAttributeResponse attrResponse = new ProductAttributeResponse();
@@ -482,6 +480,33 @@ public class ProductService {
                 })
                 .collect(Collectors.toList()));
 
+        return response;
+    }
+
+
+    @Transactional(readOnly = true)
+    public List<GetProductByStartResponse> getProductsByStar(Integer countStar) {
+        logger.info("Fetching products with minimum rating >= {}", countStar);
+
+        List<Product> products = productRepository.findByMinRatingGreaterThanEqual(countStar);
+        return products.stream()
+                .map(this::mapToSearchProductResponse)
+                .collect(Collectors.toList());
+    }
+
+    private GetProductByStartResponse mapToSearchProductResponse(Product product) {
+        GetProductByStartResponse response = new GetProductByStartResponse();
+        response.setId(product.getId());
+        response.setSlug(product.getSlug());
+        response.setProductName(product.getProductName());
+        response.setPrice(product.getPrice());
+        response.setThumbImage(product.getThumbImage());
+        response.setStock(product.getStock());
+        response.setImageUrls(product.getImageUrls());
+        response.setDescription(product.getDescription());
+        response.setStatus(product.getStatus());
+        response.setCreatedAt(product.getCreatedAt());
+        response.setUpdatedAt(product.getUpdatedAt());
         return response;
     }
 }

@@ -329,4 +329,34 @@ public class ProductController {
                     .body(new ErrorResponse("Lỗi hệ thống: " + e.getMessage()));
         }
     }
+
+    @GetMapping("/getProductByStar/{countStar}")
+    public ResponseEntity<?> getProductByStar(HttpServletRequest request, @PathVariable Integer countStar
+                                              ) {
+        try {
+            User currentUser = (User) request.getAttribute("user");
+            if (currentUser == null) {
+                logger.warn("User not authenticated for get products by star request");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new ErrorResponse("Bạn cần đăng nhập"));
+            }
+
+            if (countStar == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(new ErrorResponse("countStar là bắt buộc"));
+            }
+
+            List<GetProductByStartResponse> products = productService.getProductsByStar(countStar);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("message", "Thành công");
+            result.put("data", products);
+
+            return ResponseEntity.ok(new SuccessResponse("Thành công", result));
+        } catch (Exception e) {
+            logger.error("Error fetching products by star: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Lỗi hệ thống: " + e.getMessage()));
+        }
+    }
 }
