@@ -316,4 +316,33 @@ public class OrderController {
         }
     }
 
+    @GetMapping("/getOrderHistory/{id}")
+    public ResponseEntity<?> getOrderHistory(HttpServletRequest request, @PathVariable String id) {
+        try {
+            User currentUser = (User) request.getAttribute("user");
+            if (currentUser == null) {
+                logger.warn("User not authenticated for get order history request");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new ErrorResponse("Bạn cần đăng nhập"));
+            }
+
+            OrderHistoryResponse orderHistory = orderService.getOrderHistory(id, currentUser.getId());
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("message", "Thành công");
+            result.put("data", orderHistory);
+
+            return ResponseEntity.status(HttpStatus.OK)
+                    .body(new SuccessResponse("Thành công", result));
+        } catch (IllegalArgumentException e) {
+            logger.error("Error fetching order history: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ErrorResponse(e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Error fetching order history: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Lỗi hệ thống: " + e.getMessage()));
+        }
+    }
+
 }

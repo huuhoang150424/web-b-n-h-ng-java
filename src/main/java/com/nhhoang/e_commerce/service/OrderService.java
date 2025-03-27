@@ -614,4 +614,39 @@ public class OrderService {
 
         return detailResponse;
     }
+
+
+    public OrderHistoryResponse getOrderHistory(String orderId, String userId) {
+        Order order = orderRepository.findByIdAndUserId(orderId, userId)
+                .orElseThrow(() -> new IllegalArgumentException("Hóa đơn không tồn tại hoặc bạn không có quyền truy cập"));
+
+        OrderHistoryResponse response = new OrderHistoryResponse();
+        response.setId(order.getId());
+
+        List<OrderHistoryResponse.OrderHistoryByOrderResponse> histories = order.getOrderHistories().stream()
+                .map(this::mapToOrderHistoryByOrderResponse)
+                .collect(Collectors.toList());
+        response.setOrderHistories(histories);
+
+        return response;
+    }
+
+    private OrderHistoryResponse.OrderHistoryByOrderResponse mapToOrderHistoryByOrderResponse(OrderHistory history) {
+        OrderHistoryResponse.OrderHistoryByOrderResponse response = new OrderHistoryResponse.OrderHistoryByOrderResponse();
+        response.setId(history.getId());
+        response.setStatus(history.getStatus().name());
+        response.setChangedAt(history.getChangedAt());
+        response.setEndTime(history.getEndTime());
+        response.setOrderId(history.getOrder().getId());
+
+        if (history.getChangeBy() != null) {
+            OrderHistoryResponse.OrderHistoryByOrderResponse.UserResponse userResponse = new OrderHistoryResponse.OrderHistoryByOrderResponse.UserResponse();
+            userResponse.setId(history.getChangeBy().getId());
+            userResponse.setName(history.getChangeBy().getName());
+            userResponse.setEmail(history.getChangeBy().getEmail());
+            response.setChangeBy(userResponse);
+        }
+
+        return response;
+    }
 }

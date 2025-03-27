@@ -48,6 +48,9 @@ public class Order {
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<OrderDetail> orderDetails = new ArrayList<>();
 
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<OrderHistory> orderHistories = new ArrayList<>();
+
     @PrePersist
     public void prePersist() {
         if (createdAt == null) {
