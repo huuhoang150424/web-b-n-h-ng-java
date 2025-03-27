@@ -358,5 +358,44 @@ public class ProductController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ErrorResponse("Lỗi hệ thống: " + e.getMessage()));
         }
+
+    }
+
+    @GetMapping("/getProductByPrice")
+    public ResponseEntity<?> getProductByPrice(HttpServletRequest request,
+                                               @RequestParam(value = "minPrice", required = false) String minPrice,
+                                               @RequestParam(value = "maxPrice", required = false) String maxPrice) {
+        try {
+            User currentUser = (User) request.getAttribute("user");
+            if (currentUser == null) {
+                logger.warn("User not authenticated for get products by price request");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new ErrorResponse("Bạn cần đăng nhập"));
+            }
+            if (minPrice == null || maxPrice == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(new ErrorResponse("Vui lòng cung cấp minPrice và maxPrice"));
+            }
+            Double minPriceValue;
+            Double maxPriceValue;
+            try {
+                minPriceValue = Double.parseDouble(minPrice);
+                maxPriceValue = Double.parseDouble(maxPrice);
+            } catch (NumberFormatException e) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(new ErrorResponse("minPrice và maxPrice phải là số hợp lệ"));
+            }
+
+            List<GetProductByStartResponse> products = productService.getProductsByPrice(minPriceValue, maxPriceValue);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("message", "Thành công");
+            result.put("data", products);
+            return ResponseEntity.ok(new SuccessResponse("Thành công", result));
+        } catch (Exception e) {
+            logger.error("Error fetching products by price: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Lỗi hệ thống: " + e.getMessage()));
+        }
     }
 }

@@ -41,4 +41,6 @@ public interface ProductRepository extends JpaRepository<Product, String> {
     @Query("SELECT p FROM Product p WHERE " +
             "(SELECT MIN(r.rating) FROM Rating r WHERE r.product = p) >= :countStar")
     List<Product> findByMinRatingGreaterThanEqual(@Param("countStar") Integer countStar);
+
+    List<Product> findByPriceBetween(Double minPrice, Double maxPrice);
 }

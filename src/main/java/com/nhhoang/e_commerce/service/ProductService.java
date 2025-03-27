@@ -509,4 +509,30 @@ public class ProductService {
         response.setUpdatedAt(product.getUpdatedAt());
         return response;
     }
+
+    @Transactional(readOnly = true)
+    public List<GetProductByStartResponse> getProductsByPrice(Double minPrice, Double maxPrice) {
+        logger.info("Fetching products with price between {} and {}", minPrice, maxPrice);
+
+        List<Product> products = productRepository.findByPriceBetween(minPrice, maxPrice);
+        return products.stream()
+                .map(this::mapToGetProductByPriceResponse)
+                .collect(Collectors.toList());
+    }
+
+    private GetProductByStartResponse mapToGetProductByPriceResponse(Product product) {
+        GetProductByStartResponse response = new GetProductByStartResponse();
+        response.setId(product.getId());
+        response.setSlug(product.getSlug());
+        response.setProductName(product.getProductName());
+        response.setPrice(product.getPrice());
+        response.setThumbImage(product.getThumbImage());
+        response.setStock(product.getStock());
+        response.setImageUrls(product.getImageUrls());
+        response.setDescription(product.getDescription());
+        response.setStatus(product.getStatus());
+        response.setCreatedAt(product.getCreatedAt());
+        response.setUpdatedAt(product.getUpdatedAt());
+        return response;
+    }
 }
