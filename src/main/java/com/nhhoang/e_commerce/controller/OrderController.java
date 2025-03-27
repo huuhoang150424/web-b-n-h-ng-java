@@ -1,6 +1,8 @@
 package com.nhhoang.e_commerce.controller;
 
+import com.nhhoang.e_commerce.dto.Enum.Role;
 import com.nhhoang.e_commerce.dto.requests.*;
+import com.nhhoang.e_commerce.dto.response.PaginatedOrderResponse;
 import com.nhhoang.e_commerce.entity.User;
 import com.nhhoang.e_commerce.service.OrderService;
 import com.nhhoang.e_commerce.utils.Api.ErrorResponse;
@@ -54,4 +56,36 @@ public class OrderController {
                     .body(new ErrorResponse("Lỗi hệ thống: " + e.getMessage()));
         }
     }
+
+    @GetMapping("/getAllOrders")
+    public ResponseEntity<?> getAllOrders(
+            HttpServletRequest request,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        try {
+            User currentUser = (User) request.getAttribute("user");
+
+            if (!currentUser.getRole().equals(Role.ADMIN)) {
+                return ResponseEntity.status(403).body(new ErrorResponse("Chỉ ADMIN mới có quyền truy cập"));
+            }
+            PaginatedOrderResponse paginatedOrders = orderService.getAllOrders(page, size);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("message", "Lấy danh sách đơn hàng thành công");
+            result.put("orders", paginatedOrders);
+
+            return ResponseEntity.status(HttpStatus.OK)
+                    .body(new SuccessResponse("Thành công", result));
+        } catch (IllegalArgumentException e) {
+            logger.error("Error fetching all orders: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse(e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Error fetching all orders: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Lỗi hệ thống: " + e.getMessage()));
+        }
+    }
+
+
 }

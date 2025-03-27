@@ -1,6 +1,7 @@
 package com.nhhoang.e_commerce.service;
 
 import com.nhhoang.e_commerce.dto.requests.*;
+import com.nhhoang.e_commerce.dto.response.*;
 import com.nhhoang.e_commerce.entity.*;
 import com.nhhoang.e_commerce.repository.*;
 import org.redisson.api.RLock;
@@ -8,12 +9,16 @@ import org.redisson.api.RedissonClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class OrderService {
@@ -145,5 +150,62 @@ public class OrderService {
 
     private String generateOrderCode() {
         return "ORD" + UUID.randomUUID().toString().substring(0, 4).toUpperCase();
+    }
+
+
+    public PaginatedOrderResponse getAllOrders(Integer page, Integer size) {
+        int pageSize = (size != null && size > 0) ? Math.min(size, 100) : 10;
+        int pageNumber = (page != null && page > 0) ? page - 1 : 0;
+
+        if (page == null && size == null) {
+            List<Order> allOrders = orderRepository.findAll();
+            List<PaginatedOrderResponse.GetOrderResponse> orderResponses = allOrders.stream()
+                    .map(this::mapToGetOrderResponse)
+                    .collect(Collectors.toList());
+            return new PaginatedOrderResponse(
+                    orderResponses.size(),
+                    1,
+                    1,
+                    orderResponses.size(),
+                    orderResponses
+            );
+        }
+
+        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Page<Order> orderPage = orderRepository.findAll(pageable);
+        List<PaginatedOrderResponse.GetOrderResponse> orderResponses = orderPage.getContent().stream()
+                .map(this::mapToGetOrderResponse)
+                .collect(Collectors.toList());
+
+        return new PaginatedOrderResponse(
+                (int) orderPage.getTotalElements(),
+                orderPage.getNumber() + 1,
+                orderPage.getTotalPages(),
+                orderPage.getSize(),
+                orderResponses
+        );
+    }
+
+    private PaginatedOrderResponse.GetOrderResponse mapToGetOrderResponse(Order order) {
+        PaginatedOrderResponse.GetOrderResponse response = new PaginatedOrderResponse.GetOrderResponse();
+        response.setId(order.getId());
+        response.setTotalAmount(order.getTotalAmount());
+        response.setStatus(order.getStatus().name());
+        response.setCreatedAt(order.getCreatedAt());
+        response.setShippingAddress(order.getShippingAddress());
+        response.setReceiverName(order.getReceiverName());
+        response.setReceiverPhone(order.getReceiverPhone());
+        response.setOrderCode(order.getOrderCode());
+
+        if (order.getUser() != null) {
+            PaginatedOrderResponse.UserOrderResponse userResponse = new PaginatedOrderResponse.UserOrderResponse();
+            userResponse.setName(order.getUser().getName());
+            userResponse.setEmail(order.getUser().getEmail());
+            response.setUser(userResponse);
+        } else {
+            response.setUser(null);
+        }
+
+        return response;
     }
 }
