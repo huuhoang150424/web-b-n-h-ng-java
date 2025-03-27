@@ -116,4 +116,31 @@ public class OrderController {
         }
     }
 
+
+    @PutMapping("/confirmOrder/{id}")
+    public ResponseEntity<?> confirmOrder(HttpServletRequest request, @PathVariable String id) {
+        try {
+            User currentUser = (User) request.getAttribute("user");
+
+            if (!currentUser.getRole().equals(Role.ADMIN)) {
+                return ResponseEntity.status(403).body(new ErrorResponse("Chỉ ADMIN mới có quyền truy cập"));
+            }
+
+            orderService.confirmOrder(id, currentUser);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("message", "Xác nhận đơn hàng thành công");
+
+            return ResponseEntity.status(HttpStatus.OK)
+                    .body(new SuccessResponse("Thành công", result));
+        } catch (IllegalArgumentException e) {
+            logger.error("Error confirming order: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse(e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Error confirming order: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Lỗi hệ thống: " + e.getMessage()));
+        }
+    }
 }

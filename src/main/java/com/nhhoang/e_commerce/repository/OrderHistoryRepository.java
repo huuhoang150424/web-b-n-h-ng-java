@@ -9,4 +9,8 @@ import java.util.List;
 @Repository
 public interface OrderHistoryRepository extends JpaRepository<OrderHistory, String> {
     List<OrderHistory> findByChangeById(String changeById);
+
+    boolean existsByOrderIdAndStatus(String orderId, OrderHistory.Status status);
+
+    OrderHistory findFirstByOrderIdAndStatusOrderByChangedAtDesc(String orderId, OrderHistory.Status status);
 }

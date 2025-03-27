@@ -15,6 +15,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -247,5 +248,39 @@ public class OrderService {
         response.setOrderDetails(orderDetails);
 
         return response;
+    }
+
+
+    @Transactional
+    public void confirmOrder(String orderId, User currentUser) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Đơn hàng không tồn tại"));
+
+        if (!order.getStatus().equals(Order.Status.NOT_CONFIRMED)) {
+            throw new IllegalArgumentException("Đơn hàng không thể xác nhận");
+        }
+
+        boolean isCancelled = orderHistoryRepository.existsByOrderIdAndStatus(orderId, OrderHistory.Status.CANCELLED);
+        if (isCancelled) {
+            throw new IllegalArgumentException("Đơn hàng đã bị hủy không thể xác nhận");
+        }
+
+        order.setStatus(Order.Status.CONFIRMED);
+        orderRepository.save(order);
+
+        OrderHistory currentHistory = orderHistoryRepository.findFirstByOrderIdAndStatusOrderByChangedAtDesc(
+                orderId, OrderHistory.Status.PROCESSING);
+        if (currentHistory != null) {
+            currentHistory.setEndTime(LocalDateTime.now());
+            orderHistoryRepository.save(currentHistory);
+        }
+
+        OrderHistory newHistory = new OrderHistory();
+        newHistory.setId(UUID.randomUUID().toString());
+        newHistory.setStatus(OrderHistory.Status.SHIPPED);
+        newHistory.setOrder(order);
+        newHistory.setChangeBy(currentUser);
+        newHistory.setChangedAt(LocalDateTime.now());
+        orderHistoryRepository.save(newHistory);
     }
 }
