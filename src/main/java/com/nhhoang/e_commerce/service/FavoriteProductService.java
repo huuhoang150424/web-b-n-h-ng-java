@@ -54,8 +54,6 @@ public class FavoriteProductService {
     @Transactional
     public void removeFavoriteProduct(User user, FavoriteProductRequest request) {
         logger.info("Removing favorite product for user: {}, productId: {}", user.getId(), request.getProductId());
-
-        // Check if favorite product exists
         Optional<FavoriteProduct> favoriteProductOpt = favoriteProductRepository.findByUserIdAndProductId(
                 user.getId(), request.getProductId()
         );
@@ -74,13 +72,18 @@ public class FavoriteProductService {
         logger.info("Fetching all favorite products for user: {}", user.getId());
         List<FavoriteProduct> favoriteProducts = favoriteProductRepository.findByUserIds(user.getId());
 
-        List<FavoriteProductResponse> responses = new ArrayList<>();
-        for (FavoriteProduct fp : favoriteProducts) {
-            responses.add(mapToFavoriteProductResponse(fp));
+        List<FavoriteProductResponse> responses = favoriteProducts.stream()
+                .filter(fp -> fp.getProduct() != null)
+                .map(this::mapToFavoriteProductResponse)
+                .collect(Collectors.toList());
+
+        int filteredCount = favoriteProducts.size() - responses.size();
+        if (filteredCount > 0) {
+            logger.warn("Đã lọc bỏ {} favorite product có product null", filteredCount);
         }
+
         return responses;
     }
-
     private FavoriteProductResponse mapToFavoriteProductResponse(FavoriteProduct favoriteProduct) {
         FavoriteProductResponse response = new FavoriteProductResponse();
         response.setId(favoriteProduct.getId());
