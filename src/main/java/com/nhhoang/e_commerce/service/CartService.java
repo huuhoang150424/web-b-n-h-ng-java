@@ -91,6 +91,7 @@ public class CartService {
         response.setUserId(cart.getUser().getId());
 
         response.setCartItems(cart.getCartItems().stream()
+                .filter(cartItem -> cartItem.getProduct() != null) // Lọc bỏ các cart item có product null
                 .map(this::mapToCartItemResponse)
                 .collect(Collectors.toList()));
 
@@ -103,12 +104,24 @@ public class CartService {
         response.setQuantity(cartItem.getQuantity());
 
         ProductCartResponse productCartResponse = new ProductCartResponse();
-        productCartResponse.setId(cartItem.getProduct().getId());
-        productCartResponse.setProductName(cartItem.getProduct().getProductName());
-        productCartResponse.setPrice(cartItem.getProduct().getPrice());
-        productCartResponse.setThumbImage(cartItem.getProduct().getThumbImage());
-        response.setProduct(productCartResponse);
 
+        if (cartItem.getProduct() != null) {
+            productCartResponse.setId(cartItem.getProduct().getId());
+            productCartResponse.setProductName(cartItem.getProduct().getProductName());
+            productCartResponse.setPrice(cartItem.getProduct().getPrice());
+            productCartResponse.setThumbImage(cartItem.getProduct().getThumbImage());
+        } else {
+            // Set default values or handle null product
+            productCartResponse.setId(null);
+            productCartResponse.setProductName("Sản phẩm không tồn tại");
+            productCartResponse.setPrice(0.0f);
+            productCartResponse.setThumbImage("");
+
+            // Optionally log this issue
+            logger.warn("Cart item with ID {} has a null product reference", cartItem.getId());
+        }
+
+        response.setProduct(productCartResponse);
         return response;
     }
 
