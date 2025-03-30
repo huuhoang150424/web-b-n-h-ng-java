@@ -35,6 +35,7 @@ public class OrderByUserResponse {
             private String productName;
             private Float price;
             private String thumbImage;
+            private Integer stock;
         }
     }
 }

@@ -236,12 +236,25 @@ public class OrderService {
                     detailResponse.setPrice(detail.getPrice());
 
                     OrderByUserResponse.OrderDetailResponse.ProductResponse productResponse = new OrderByUserResponse.OrderDetailResponse.ProductResponse();
-                    productResponse.setId(detail.getProduct().getId());
-                    productResponse.setProductName(detail.getProduct().getProductName());
-                    productResponse.setPrice(detail.getProduct().getPrice());
-                    productResponse.setThumbImage(detail.getProduct().getThumbImage());
-                    detailResponse.setProduct(productResponse);
 
+                    if (detail.getProduct() != null) {
+                        productResponse.setId(detail.getProduct().getId());
+                        productResponse.setProductName(detail.getProduct().getProductName());
+                        productResponse.setPrice(detail.getProduct().getPrice());
+                        productResponse.setThumbImage(detail.getProduct().getThumbImage());
+                        productResponse.setStock(detail.getProduct().getStock());
+                    } else {
+                        productResponse.setId(null);
+                        productResponse.setProductName("Sản phẩm không tồn tại");
+                        productResponse.setPrice(detail.getPrice());
+                        productResponse.setThumbImage("");
+                        productResponse.setStock(0);
+
+                        logger.warn("Order detail ID {} có product null (Order ID: {})",
+                                detail.getId(), order.getId());
+                    }
+
+                    detailResponse.setProduct(productResponse);
                     return detailResponse;
                 })
                 .collect(Collectors.toList());
@@ -249,7 +262,6 @@ public class OrderService {
 
         return response;
     }
-
 
     @Transactional
     public void confirmOrder(String orderId, User currentUser) {
@@ -393,9 +405,9 @@ public class OrderService {
         detailResponse.setQuantity(detail.getQuantity());
         detailResponse.setPrice(detail.getPrice());
 
+        OrderHistoryByUserResponse.ProductResponse productResponse = new OrderHistoryByUserResponse.ProductResponse();
         Product product = detail.getProduct();
         if (product != null) {
-            OrderHistoryByUserResponse.ProductResponse productResponse = new OrderHistoryByUserResponse.ProductResponse();
             productResponse.setProductName(product.getProductName());
             productResponse.setPrice(product.getPrice());
             productResponse.setThumbImage(product.getThumbImage());
@@ -408,13 +420,19 @@ public class OrderService {
                 categoryResponse.setImage(product.getCategory().getImage());
                 productResponse.setCategory(categoryResponse);
             }
+        } else {
+            productResponse.setProductName("Sản phẩm không tồn tại");
+            productResponse.setPrice(detail.getPrice());
+            productResponse.setThumbImage("");
+            productResponse.setStock(0);
 
-            detailResponse.setProduct(productResponse);
+            logger.warn("Order detail ID {} có product null (Order ID: {})",
+                    detail.getId(), detail.getOrder().getId());
         }
+        detailResponse.setProduct(productResponse);
 
         return detailResponse;
     }
-
     public List<OrderHistoryByUserResponse> getShippedOrders(String userId) {
         List<OrderHistory> shippedOrders = orderHistoryRepository.findByOrderUserIdAndStatusAndEndTimeIsNull(
                 userId, OrderHistory.Status.SHIPPED);
@@ -459,9 +477,10 @@ public class OrderService {
         detailResponse.setQuantity(detail.getQuantity());
         detailResponse.setPrice(detail.getPrice());
 
+        OrderHistoryByUserResponse.ProductResponse productResponse = new OrderHistoryByUserResponse.ProductResponse();
+
         Product product = detail.getProduct();
         if (product != null) {
-            OrderHistoryByUserResponse.ProductResponse productResponse = new OrderHistoryByUserResponse.ProductResponse();
             productResponse.setProductName(product.getProductName());
             productResponse.setPrice(product.getPrice());
             productResponse.setThumbImage(product.getThumbImage());
@@ -474,9 +493,17 @@ public class OrderService {
                 categoryResponse.setImage(product.getCategory().getImage());
                 productResponse.setCategory(categoryResponse);
             }
+        } else {
+            productResponse.setProductName("Sản phẩm không tồn tại");
+            productResponse.setPrice(detail.getPrice());
+            productResponse.setThumbImage("");
+            productResponse.setStock(0);
 
-            detailResponse.setProduct(productResponse);
+            logger.warn("Order detail ID {} có product null (Order ID: {})",
+                    detail.getId(), detail.getOrder().getId());
         }
+
+        detailResponse.setProduct(productResponse);
 
         return detailResponse;
     }
@@ -525,10 +552,10 @@ public class OrderService {
         detailResponse.setId(detail.getId());
         detailResponse.setQuantity(detail.getQuantity());
         detailResponse.setPrice(detail.getPrice());
+        OrderHistoryByUserResponse.ProductResponse productResponse = new OrderHistoryByUserResponse.ProductResponse();
 
         Product product = detail.getProduct();
         if (product != null) {
-            OrderHistoryByUserResponse.ProductResponse productResponse = new OrderHistoryByUserResponse.ProductResponse();
             productResponse.setProductName(product.getProductName());
             productResponse.setPrice(product.getPrice());
             productResponse.setThumbImage(product.getThumbImage());
@@ -541,9 +568,16 @@ public class OrderService {
                 categoryResponse.setImage(product.getCategory().getImage());
                 productResponse.setCategory(categoryResponse);
             }
+        } else {
+            productResponse.setProductName("Sản phẩm không tồn tại");
+            productResponse.setPrice(detail.getPrice());
+            productResponse.setThumbImage("");
+            productResponse.setStock(0);
 
-            detailResponse.setProduct(productResponse);
+            logger.warn("Processing Order: Order detail ID {} có product null (Order ID: {})",
+                    detail.getId(), detail.getOrder().getId());
         }
+        detailResponse.setProduct(productResponse);
 
         return detailResponse;
     }
@@ -671,4 +705,7 @@ public class OrderService {
         }
         return response;
     }
+
+
+    
 }
