@@ -74,14 +74,11 @@ public class RatingService {
         long totalItems;
 
         if (page == null && size == null) {
-            // Không phân trang, trả về toàn bộ
             List<Comment> comments = commentRepository.findAll();
             reviews = processComments(comments);
             totalItems = reviews.size();
             return new ReviewResult(totalItems, 1, 1, reviews.size(), reviews);
         }
-
-        // Xử lý phân trang
         int pageNumber = page != null && page > 0 ? page - 1 : 0;
         int pageSize = size != null && size > 0 && size <= MAX_PAGE_SIZE ? size : DEFAULT_PAGE_SIZE;
         Pageable pageable = PageRequest.of(pageNumber, pageSize);
@@ -100,21 +97,21 @@ public class RatingService {
     }
 
     private List<ReviewResponse> processComments(List<Comment> comments) {
-        // Nhóm Comment theo cặp user-product
+        // Nhóm các comment theo user_id và product_id, xử lý trường hợp product null
         Map<String, List<Comment>> groupedComments = comments.stream()
                 .collect(Collectors.groupingBy(
-                        comment -> comment.getUser().getId() + "_" + comment.getProduct().getId()
+                        comment -> {
+                            String productId = (comment.getProduct() != null) ? comment.getProduct().getId() : "null";
+                            return comment.getUser().getId() + "_" + productId;
+                        }
                 ));
 
         List<ReviewResponse> reviews = new ArrayList<>();
 
         for (List<Comment> commentList : groupedComments.values()) {
-            // Lấy Comment đầu tiên để gắn Rating (nếu có)
             Comment firstComment = commentList.get(0);
             ReviewResponse responseWithRating = mapToReviewResponse(firstComment, true);
             reviews.add(responseWithRating);
-
-            // Thêm các Comment còn lại (không có Rating)
             for (int i = 1; i < commentList.size(); i++) {
                 ReviewResponse responseWithoutRating = mapToReviewResponse(commentList.get(i), false);
                 reviews.add(responseWithoutRating);
@@ -127,23 +124,27 @@ public class RatingService {
     private ReviewResponse mapToReviewResponse(Comment comment, boolean includeRating) {
         ReviewResponse response = new ReviewResponse();
 
-        // Product info
-        ReviewResponse.ProductReviewResponse product = new ReviewResponse.ProductReviewResponse();
-        product.setProductName(comment.getProduct().getProductName());
-        product.setThumbImage(comment.getProduct().getThumbImage());
-        response.setProduct(product);
+        // Xử lý product (nếu null thì để null)
+        if (comment.getProduct() != null) {
+            ReviewResponse.ProductReviewResponse product = new ReviewResponse.ProductReviewResponse();
+            product.setProductName(comment.getProduct().getProductName());
+            product.setThumbImage(comment.getProduct().getThumbImage());
+            response.setProduct(product);
+        } else {
+            response.setProduct(null); // Nếu sản phẩm là null, không trả về thông tin sản phẩm
+        }
 
-        // User info
+        // Xử lý user
         ReviewResponse.UserReviewResponse user = new ReviewResponse.UserReviewResponse();
         user.setAvatar(comment.getUser().getAvatar());
         user.setName(comment.getUser().getName());
         response.setUser(user);
 
-        // Comment
+        // Xử lý comment
         response.setComment(comment.getComment());
 
-        // Rating (chỉ gắn cho Comment đầu tiên nếu includeRating = true)
-        if (includeRating) {
+        // Xử lý rating
+        if (includeRating && comment.getProduct() != null) { // Chỉ lấy rating nếu product không null
             Optional<Rating> rating = ratingRepository.findByUserAndProduct(comment.getUser(), comment.getProduct());
             response.setRating(rating.isPresent() ? rating.get().getRating() : null);
         } else {
