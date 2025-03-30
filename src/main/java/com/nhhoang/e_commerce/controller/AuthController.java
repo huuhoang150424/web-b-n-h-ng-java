@@ -58,24 +58,13 @@ public class AuthController {
             UserResponse userResponse = authService.login(request);
             User user = authService.findById(userResponse.getId());
             String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getRole());
-            String refreshToken = jwtUtil.generateRefreshToken(user.getId());
-
-            ResponseCookie refreshTokenCookie = ResponseCookie.from("refreshToken", refreshToken)
-                    .httpOnly(true)
-                    .secure(true)
-                    .sameSite("Lax")
-                    .maxAge(365 * 24 * 60 * 60)
-                    .path("/")
-                    .build();
-
             Map<String, Object> result = new HashMap<>();
             result.put("accessToken", accessToken);
             result.put("user", userResponse);
 
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString())
-                    .body(new SuccessResponse("Đăng nhập thành công", result));
 
+            return ResponseEntity.ok()
+                    .body(new SuccessResponse("Đăng nhập thành công", result));
         } catch (BadCredentialsException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse("Sai tài khoản hoặc mật khẩu"));
         } catch (DisabledException e) {
@@ -105,7 +94,7 @@ public class AuthController {
     public ResponseEntity<?> logout() {
         ResponseCookie deleteRefreshTokenCookie = ResponseCookie.from("refreshToken", null)
                 .httpOnly(true)
-                .secure(true)
+                .secure(false)
                 .sameSite("Lax")
                 .maxAge(0)
                 .path("/")
@@ -116,36 +105,39 @@ public class AuthController {
                 .body(new SuccessResponse("Đăng xuất thành công",null));
     }
 
-    @GetMapping("/refresh-token")
-    public ResponseEntity<?> refreshToken(HttpServletRequest request) {
-        try {
-            // Lấy refreshToken từ cookie
-            String refreshToken = getRefreshTokenFromCookies(request);
-            if (refreshToken == null || !jwtUtil.validateToken(refreshToken)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse("Refresh token không hợp lệ"));
-            }
-
-            // Trích xuất userId từ token
-            String userId = jwtUtil.extractUserId(refreshToken);
-            User user = authService.findById(userId);
-            if (user == null) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse("Người dùng không tồn tại"));
-            }
-
-            // Tạo accessToken mới
-            String accessToken = jwtUtil.generateAccessToken(user.getId(),user.getRole());
-
-            // Phản hồi với accessToken mới, giữ nguyên refreshToken
-            Map<String, String> responseData = new HashMap<>();
-            responseData.put("refreshToken", refreshToken);
-            responseData.put("accessToken", accessToken);
-
-            return ResponseEntity.ok(responseData);
-
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse("Lỗi khi làm mới token"));
-        }
-    }
+//    @GetMapping("/refresh-token")
+//    public ResponseEntity<?> refreshToken(HttpServletRequest request) {
+//        try {
+//            String refreshToken = getRefreshTokenFromCookies(request);
+//            System.out.println("check refreshToken"+refreshToken);
+//            if (refreshToken == null || !jwtUtil.validateToken(refreshToken)) {
+//                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse("Refresh token không hợp lệ"));
+//            }
+//            String userId = jwtUtil.extractUserId(refreshToken);
+//            User user = authService.findById(userId);
+//            if (user == null) {
+//                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse("Người dùng không tồn tại"));
+//            }
+//            String accessToken = jwtUtil.generateAccessToken(user.getId(),user.getRole());
+//            String newRefreshToken = jwtUtil.generateRefreshToken(user.getId());
+//            ResponseCookie refreshTokenCookie = ResponseCookie.from("refreshToken", newRefreshToken)
+//                    .httpOnly(true)
+//                    .secure(false)
+//                    .sameSite("Lax")
+//                    .maxAge(365 * 24 * 60 * 60)
+//                    .path("/")
+//                    .build();
+//            Map<String, Object> responseData = new HashMap<>();
+//
+//            responseData.put("accessToken", accessToken);
+//            return ResponseEntity.ok()
+//                    .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString())
+//                    .body(new SuccessResponse("Đăng nhập thành công", responseData));
+//
+//        } catch (Exception e) {
+//            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse("Lỗi khi làm mới token"));
+//        }
+//    }
 
     private String getRefreshTokenFromCookies(HttpServletRequest request) {
         if (request.getCookies() != null) {

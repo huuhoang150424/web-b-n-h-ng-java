@@ -1,10 +1,8 @@
 package com.nhhoang.e_commerce.service;
 
-import com.nhhoang.e_commerce.dto.requests.CreateCategoryRequest;
-import com.nhhoang.e_commerce.dto.requests.UpdateCategoryRequest;
-import com.nhhoang.e_commerce.dto.response.CategoryResponse;
-import com.nhhoang.e_commerce.entity.Category;
-import com.nhhoang.e_commerce.entity.Product;
+import com.nhhoang.e_commerce.dto.requests.*;
+import com.nhhoang.e_commerce.dto.response.*;
+import com.nhhoang.e_commerce.entity.*;
 import com.nhhoang.e_commerce.repository.CategoryRepository;
 import com.nhhoang.e_commerce.repository.ProductRepository;
 import jakarta.transaction.Transactional;
@@ -15,6 +13,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class CategoryService {
@@ -83,5 +82,21 @@ public class CategoryService {
         }
 
         categoryRepository.save(category);
+    }
+
+    public List<CategoryClientResponse> getTopCategoriesByProductCount() {
+        List<Category> categories = categoryRepository.findTop5ByOrderByProductCountDesc();
+        return categories.stream()
+                .map(this::mapToCategoryClientResponse)
+                .limit(5)
+                .collect(Collectors.toList());
+    }
+
+    private CategoryClientResponse mapToCategoryClientResponse(Category category) {
+        CategoryClientResponse response = new CategoryClientResponse();
+        response.setId(category.getId());
+        response.setCategoryName(category.getCategoryName());
+        response.setProductCount(category.getProducts() != null ? category.getProducts().size() : 0);
+        return response;
     }
 }

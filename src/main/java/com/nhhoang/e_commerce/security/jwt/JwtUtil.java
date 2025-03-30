@@ -12,7 +12,7 @@ import java.util.function.Function;
 @Component
 public class JwtUtil {
     private final String secretKey = "RnZEMno2UlFuUjJQTCtBeDBxODJLOGFKWUtObTNkWmhPZEZ6WVhlVjhQdEx4RA==";
-    private final long accessTokenExpiration = 1000 * 60 * 60 * 24;
+    private final long accessTokenExpiration = 1000 * 60 * 60 * 24 * 365;
     private final long refreshTokenExpiration = 1000 * 60 * 60 * 24 * 365;
 
     private Key getSigningKey() {

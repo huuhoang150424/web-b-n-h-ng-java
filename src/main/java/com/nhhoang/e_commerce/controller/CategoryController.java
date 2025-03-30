@@ -1,16 +1,17 @@
 package com.nhhoang.e_commerce.controller;
 
 import com.nhhoang.e_commerce.dto.Enum.Role;
-import com.nhhoang.e_commerce.dto.requests.CreateCategoryRequest;
-import com.nhhoang.e_commerce.dto.requests.UpdateCategoryRequest;
-import com.nhhoang.e_commerce.dto.response.CategoryResponse;
-import com.nhhoang.e_commerce.entity.Category;
-import com.nhhoang.e_commerce.entity.User;
+import com.nhhoang.e_commerce.dto.requests.*;
+import com.nhhoang.e_commerce.dto.response.*;
+import com.nhhoang.e_commerce.entity.*;
 import com.nhhoang.e_commerce.service.CategoryService;
 import com.nhhoang.e_commerce.utils.Api.ErrorResponse;
 import com.nhhoang.e_commerce.utils.Api.SuccessResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
@@ -25,6 +26,8 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/category")
 public class CategoryController {
+
+    private static final Logger logger = LoggerFactory.getLogger(CategoryController.class);
 
     @Autowired
     private CategoryService categoryService;
@@ -181,6 +184,30 @@ public class CategoryController {
             return ResponseEntity.status(404).body(new ErrorResponse("Danh mục không tồn tại"));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(new ErrorResponse("Đã xảy ra lỗi trong quá trình xử lý: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/getAllClient")
+    public ResponseEntity<?> getAllClient(HttpServletRequest request) {
+        try {
+            User currentUser = (User) request.getAttribute("user");
+            if (currentUser == null) {
+                logger.warn("User not authenticated for get all client categories request");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new ErrorResponse("Bạn cần đăng nhập"));
+            }
+
+            List<CategoryClientResponse> categories = categoryService.getTopCategoriesByProductCount();
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("data", categories);
+
+            return ResponseEntity.status(HttpStatus.OK)
+                    .body(new SuccessResponse("Thành công", result));
+        } catch (Exception e) {
+            logger.error("Error fetching top categories: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Lỗi không xác định"));
         }
     }
 }
