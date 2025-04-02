@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -31,6 +32,9 @@ public class OrderService {
 
     @Autowired
     private ProductRepository productRepository;
+
+    @Autowired
+    private CommentRepository commentRepository;
 
     @Autowired
     private UserRepository userRepository;
@@ -725,4 +729,27 @@ public class OrderService {
         return result;
     }
 
+
+    public MonthlyTargetResponse getMonthlyTargets() {
+        LocalDateTime now = LocalDateTime.now();
+        int currentMonth = now.getMonthValue();
+        int currentYear = now.getYear();
+
+        LocalDateTime startOfMonth = LocalDateTime.of(currentYear, currentMonth, 1, 0, 0);
+        LocalDateTime endOfMonth = YearMonth.of(currentYear, currentMonth).atEndOfMonth().atTime(23, 59, 59);
+
+        // Tính các chỉ số
+        Integer userCount = userRepository.countByCreatedAtBetween(startOfMonth, endOfMonth);
+        Integer orderCount = orderRepository.countByCreatedAtBetween(startOfMonth, endOfMonth);
+        Integer commentCount = commentRepository.countByCreatedAtBetween(startOfMonth, endOfMonth);
+        Float totalRevenue = orderRepository.sumTotalAmountByCreatedAtBetween(startOfMonth, endOfMonth);
+
+        MonthlyTargetResponse response = new MonthlyTargetResponse();
+        response.setUserCount(userCount);
+        response.setOrderCount(orderCount);
+        response.setCommentCount(commentCount);
+        response.setTotalRevenue(totalRevenue != null ? totalRevenue : 0.0f);
+
+        return response;
+    }
 }

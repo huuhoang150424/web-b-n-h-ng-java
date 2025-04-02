@@ -405,4 +405,22 @@ public class OrderController {
                     .body(new ErrorResponse("Lỗi hệ thống: " + e.getMessage()));
         }
     }
+
+    @GetMapping("/getTargetForTheMonth")
+    public ResponseEntity<?> getTargetForTheMonth() {
+        try {
+            MonthlyTargetResponse targets = orderService.getMonthlyTargets();
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("message", "Thành công");
+            result.put("data", targets);
+
+            return ResponseEntity.status(HttpStatus.OK)
+                    .body(new SuccessResponse("Thành công", result));
+        } catch (Exception e) {
+            logger.error("Error fetching monthly targets: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Lỗi hệ thống: " + e.getMessage()));
+        }
+    }
 }
