@@ -706,6 +706,23 @@ public class OrderService {
         return response;
     }
 
+    public List<MonthlyRevenueResponse> getRevenueForYear(Integer year) {
+        List<MonthlyRevenueResponse> result = new ArrayList<>();
+        for (int month = 1; month <= 12; month++) {
+            MonthlyRevenueResponse monthlyRevenue = new MonthlyRevenueResponse();
+            monthlyRevenue.setName("T" + month);
+            monthlyRevenue.setTotal(0.0f);
+            result.add(monthlyRevenue);
+        }
+        LocalDateTime startOfYear = LocalDateTime.of(year, 1, 1, 0, 0);
+        LocalDateTime endOfYear = LocalDateTime.of(year, 12, 31, 23, 59, 59);
+        List<Order> orders = orderRepository.findByCreatedAtBetween(startOfYear, endOfYear);
+        for (Order order : orders) {
+            int month = order.getCreatedAt().getMonthValue();
+            result.get(month - 1).setTotal(result.get(month - 1).getTotal() + order.getTotalAmount());
+        }
 
+        return result;
+    }
 
 }

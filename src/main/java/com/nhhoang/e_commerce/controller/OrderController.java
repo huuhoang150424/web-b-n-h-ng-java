@@ -378,4 +378,31 @@ public class OrderController {
         }
     }
 
+    @GetMapping("/revenue/{year}")
+    public ResponseEntity<?> getRevenueForTheYear(HttpServletRequest request, @PathVariable Integer year) {
+        try {
+            User currentUser = (User) request.getAttribute("user");
+            if (currentUser == null) {
+                logger.warn("User not authenticated for get revenue request");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new ErrorResponse("Bạn cần đăng nhập"));
+            }
+            if (!currentUser.getRole().equals(Role.ADMIN)) {
+                return ResponseEntity.status(403).body(new ErrorResponse("Chỉ ADMIN mới có quyền truy cập"));
+            }
+
+            List<MonthlyRevenueResponse> revenueData = orderService.getRevenueForYear(year);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("message", "Thành công");
+            result.put("data", revenueData);
+
+            return ResponseEntity.status(HttpStatus.OK)
+                    .body(new SuccessResponse("Thành công", result));
+        } catch (Exception e) {
+            logger.error("Error fetching revenue for year {}: {}", year, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Lỗi hệ thống: " + e.getMessage()));
+        }
+    }
 }
