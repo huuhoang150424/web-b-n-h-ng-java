@@ -1,9 +1,8 @@
 package com.nhhoang.e_commerce.service;
 
 import com.nhhoang.e_commerce.dto.Enum.Role;
-import com.nhhoang.e_commerce.dto.requests.CreateUserRequest;
-import com.nhhoang.e_commerce.dto.requests.UpdateProfileRequest;
-import com.nhhoang.e_commerce.dto.requests.UpdateUserRequest;
+import com.nhhoang.e_commerce.dto.requests.*;
+import com.nhhoang.e_commerce.dto.response.*;
 import com.nhhoang.e_commerce.entity.*;
 import com.nhhoang.e_commerce.repository.*;
 import com.nhhoang.e_commerce.repository.UserRepository;
@@ -20,6 +19,7 @@ import java.util.List;
 import java.util.UUID;
 import java.text.Normalizer;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Service
 public class UserService {
@@ -176,7 +176,7 @@ public class UserService {
                 .orElseThrow(() -> new IllegalArgumentException("Người dùng không tồn tại"));
 
         if (request.getName() != null) {
-            String normalizedName = normalizeString(request.getName()); // Chuẩn hóa tên
+            String normalizedName = normalizeString(request.getName());
             user.setName(normalizedName);
         }
         if (request.getEmail() != null) {
@@ -199,5 +199,21 @@ public class UserService {
         String normalized = Normalizer.normalize(input, Normalizer.Form.NFD);
         Pattern pattern = Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
         return pattern.matcher(normalized).replaceAll("").replaceAll("[^\\p{ASCII}]", "");
+    }
+
+    public List<UserBuyProductResponse> getTopUsersByOrderCount() {
+        List<User> topUsers = userRepository.findTop20ByOrderByOrderCountDesc();
+        return topUsers.stream()
+                .map(this::mapToUserBuyProductResponse)
+                .collect(Collectors.toList());
+    }
+
+    private UserBuyProductResponse mapToUserBuyProductResponse(User user) {
+        UserBuyProductResponse response = new UserBuyProductResponse();
+        response.setName(user.getName());
+        response.setEmail(user.getEmail());
+        response.setAvatar(user.getAvatar());
+        response.setOrderCount(user.getOrders() != null ? user.getOrders().size() : 0);
+        return response;
     }
 }

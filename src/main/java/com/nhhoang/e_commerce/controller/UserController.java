@@ -2,15 +2,13 @@ package com.nhhoang.e_commerce.controller;
 
 import com.nhhoang.e_commerce.dto.Enum.Role;
 import com.nhhoang.e_commerce.dto.requests.*;
-import com.nhhoang.e_commerce.dto.response.GetAllUserResponse;
-import com.nhhoang.e_commerce.dto.response.GetUserResponse;
-import com.nhhoang.e_commerce.dto.response.UserProfileResponse;
-import com.nhhoang.e_commerce.dto.response.UserResponse;
+import com.nhhoang.e_commerce.dto.response.*;
 import com.nhhoang.e_commerce.entity.User;
 import com.nhhoang.e_commerce.service.UserService;
 import com.nhhoang.e_commerce.utils.Api.ErrorResponse;
 import com.nhhoang.e_commerce.utils.Api.SuccessResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
@@ -21,11 +19,15 @@ import jakarta.validation.Valid;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/user")
 public class UserController {
+
+    private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
     @Autowired
     private UserService userService;
@@ -326,6 +328,34 @@ public class UserController {
             return ResponseEntity.status(404).body(new ErrorResponse("Người dùng không tồn tại"));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(new ErrorResponse("Lỗi server: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/statisticalUser")
+    public ResponseEntity<?> getUserBuyProductSoMuch(HttpServletRequest request) {
+        try {
+            User currentUser = (User) request.getAttribute("user");
+            if (currentUser == null) {
+                logger.warn("User not authenticated for get top buyers request");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new ErrorResponse("Bạn cần đăng nhập"));
+            }
+            if (!currentUser.getRole().equals(Role.ADMIN)) {
+                return ResponseEntity.status(403).body(new ErrorResponse("Chỉ ADMIN mới có quyền truy cập"));
+            }
+
+            List<UserBuyProductResponse> topUsers = userService.getTopUsersByOrderCount();
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("message", "Thành công");
+            result.put("data", topUsers);
+
+            return ResponseEntity.status(HttpStatus.OK)
+                    .body(new SuccessResponse("Thành công", result));
+        } catch (Exception e) {
+            logger.error("Error fetching top buyers: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Lỗi hệ thống: " + e.getMessage()));
         }
     }
 
