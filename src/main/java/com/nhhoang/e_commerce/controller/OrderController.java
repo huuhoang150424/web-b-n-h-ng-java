@@ -14,9 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/order")
@@ -419,6 +417,72 @@ public class OrderController {
                     .body(new SuccessResponse("Thành công", result));
         } catch (Exception e) {
             logger.error("Error fetching monthly targets: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Lỗi hệ thống: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/createVnPay")
+    public ResponseEntity<?> createPayment(HttpServletRequest request,
+                                           @RequestBody OrderRequestVnPay orderRequest) {
+        try {
+            User currentUser = (User) request.getAttribute("user");
+            if (currentUser == null) {
+                logger.warn("User not authenticated for create VNPay payment request");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new ErrorResponse("Bạn cần đăng nhập"));
+            }
+            Order order = orderService.createVnPayOrder(currentUser.getId(), orderRequest);
+            String ipAddr = request.getRemoteAddr();
+            VNPayResponse response = orderService.createPaymentUrl(order.getId(), order.getTotalAmount(), ipAddr);
+            Map<String, Object> result = new HashMap<>();
+            result.put("paymentUrl", response.getPaymentUrl());
+            result.put("orderId", order.getId());
+
+            return ResponseEntity.status(HttpStatus.OK)
+                    .body(new SuccessResponse("Tạo URL thanh toán VNPay thành công", result));
+        } catch (IllegalArgumentException e) {
+            logger.error("Error creating VNPAY payment: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse(e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Error creating VNPAY payment: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Lỗi hệ thống: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/return")
+    public ResponseEntity<?> handleVNPayReturn(HttpServletRequest request) {
+        try {
+            Map<String, String> vnpParams = new TreeMap<>();
+
+            Enumeration<String> parameterNames = request.getParameterNames();
+            while (parameterNames.hasMoreElements()) {
+                String paramName = parameterNames.nextElement();
+                String paramValue = request.getParameter(paramName);
+                vnpParams.put(paramName, paramValue);
+            }
+            logger.info("VNPay return params: {}", vnpParams);
+
+            VNPayResponse response = orderService.verifyPaymentReturn(vnpParams);
+
+            if ("00".equals(response.getStatus())) {
+                String orderId = vnpParams.get("vnp_TxnRef");
+                String transactionId = vnpParams.get("vnp_TransactionNo");
+                orderService.updateOrderPaymentStatus(orderId, transactionId, Payment.PaymentStatus.COMPLETED);
+                logger.info("Payment completed for order: {}", orderId);
+            } else {
+                logger.warn("Payment failed or invalid signature: {}", response.getMessage());
+            }
+            Map<String, Object> result = new HashMap<>();
+            result.put("status", response.getStatus());
+            result.put("message", response.getMessage());
+
+            return ResponseEntity.status(HttpStatus.OK)
+                    .body(new SuccessResponse("Xử lý phản hồi VNPay thành công", result));
+        } catch (Exception e) {
+            logger.error("Error handling VNPay return: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ErrorResponse("Lỗi hệ thống: " + e.getMessage()));
         }

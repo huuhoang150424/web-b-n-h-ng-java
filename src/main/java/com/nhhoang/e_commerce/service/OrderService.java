@@ -9,17 +9,21 @@ import org.redisson.api.RedissonClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.nhhoang.e_commerce.config.*;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -54,6 +58,18 @@ public class OrderService {
     @Autowired
     private RedissonClient redissonClient;
 
+    @Value("${vnpay.tmn-code}")
+    private String vnpTmnCode;
+
+    @Value("${vnpay.hash-secret}")
+    private String vnpHashSecret;
+
+    @Value("${vnpay.pay-url}")
+    private String vnpPayUrl;
+
+    @Value("${vnpay.return-url}")
+    private String vnpReturnUrl;
+
     @Transactional
     public String createOrderCod(String userId, CreateOrderCodRequest request) {
         List<RLock> productLocks = new ArrayList<>();
@@ -70,7 +86,7 @@ public class OrderService {
             order.setId(UUID.randomUUID().toString());
             order.setUser(userRepository.findById(userId)
                     .orElseThrow(() -> new IllegalArgumentException("Người dùng với ID " + userId + " không tồn tại.")));
-            order.setTotalAmount(0f); // Sẽ cập nhật sau
+            order.setTotalAmount(0f);
             order.setStatus(Order.Status.NOT_CONFIRMED);
             order.setShippingAddress(request.getShippingAddress());
             order.setReceiverName(request.getReceiverName());
@@ -98,7 +114,7 @@ public class OrderService {
                     throw new IllegalArgumentException("Sản phẩm " + product.getProductName() + " không đủ số lượng.");
                 }
 
-                product.setStock(product.getStock() - item.getQuantity()); // Trừ stock một lần
+                product.setStock(product.getStock() - item.getQuantity());
                 productRepository.save(product);
                 totalAmount += item.getQuantity() * item.getProduct().getPrice().floatValue();
 
@@ -437,6 +453,7 @@ public class OrderService {
 
         return detailResponse;
     }
+
     public List<OrderHistoryByUserResponse> getShippedOrders(String userId) {
         List<OrderHistory> shippedOrders = orderHistoryRepository.findByOrderUserIdAndStatusAndEndTimeIsNull(
                 userId, OrderHistory.Status.SHIPPED);
@@ -738,7 +755,6 @@ public class OrderService {
         LocalDateTime startOfMonth = LocalDateTime.of(currentYear, currentMonth, 1, 0, 0);
         LocalDateTime endOfMonth = YearMonth.of(currentYear, currentMonth).atEndOfMonth().atTime(23, 59, 59);
 
-        // Tính các chỉ số
         Integer userCount = userRepository.countByCreatedAtBetween(startOfMonth, endOfMonth);
         Integer orderCount = orderRepository.countByCreatedAtBetween(startOfMonth, endOfMonth);
         Integer commentCount = commentRepository.countByCreatedAtBetween(startOfMonth, endOfMonth);
@@ -749,6 +765,209 @@ public class OrderService {
         response.setOrderCount(orderCount);
         response.setCommentCount(commentCount);
         response.setTotalRevenue(totalRevenue != null ? totalRevenue : 0.0f);
+
+        return response;
+    }
+
+    @Transactional
+    public Order createVnPayOrder(String userId, OrderRequestVnPay orderRequest) {
+        List<RLock> productLocks = new ArrayList<>();
+
+        try {
+            List<CartRequestVnPay> cartItems = orderRequest.getCarts();
+            if (cartItems == null || cartItems.isEmpty()) {
+                throw new IllegalArgumentException("Giỏ hàng của bạn trống.");
+            }
+
+            float totalAmount = 0;
+            Order order = new Order();
+            order.setId(UUID.randomUUID().toString());
+            order.setUser(userRepository.findById(userId)
+                    .orElseThrow(() -> new IllegalArgumentException("Người dùng với ID " + userId + " không tồn tại.")));
+            order.setTotalAmount(0f);
+            order.setStatus(Order.Status.CONFIRMED);
+            order.setShippingAddress(orderRequest.getShippingAddress());
+            order.setReceiverName(orderRequest.getReceiverName());
+            order.setReceiverPhone(orderRequest.getReceiverPhone());
+            order.setOrderCode(generateOrderCodeVnPay());
+            orderRepository.save(order);
+            for (CartRequestVnPay item : cartItems) {
+                String productId = item.getProduct().getId();
+                RLock lock = redissonClient.getLock("lock:product:" + productId);
+                if (!lock.tryLock()) {
+                    throw new IllegalArgumentException("Sản phẩm " + productId + " đang được mua bởi người khác.");
+                }
+                productLocks.add(lock);
+                Product product = productRepository.findById(productId)
+                        .orElseThrow(() -> new IllegalArgumentException("Sản phẩm với ID " + productId + " không tồn tại."));
+                logger.info("Product stock from repository: {}, Requested quantity: {}", product.getStock(), item.getQuantity());
+                if (product.getStock() < item.getQuantity()) {
+                    throw new IllegalArgumentException("Sản phẩm " + product.getProductName() + " không đủ số lượng.");
+                }
+                product.setStock(product.getStock() - item.getQuantity());
+                productRepository.save(product);
+                totalAmount += item.getQuantity() * item.getProduct().getPrice();
+                OrderDetail orderDetail = new OrderDetail();
+                orderDetail.setId(UUID.randomUUID().toString());
+                orderDetail.setOrder(order);
+                orderDetail.setProduct(product);
+                orderDetail.setPrice(item.getProduct().getPrice() * item.getQuantity());
+                orderDetail.setQuantity(item.getQuantity());
+                orderDetailRepository.save(orderDetail);
+                if (item.getId() != null) {
+                    CartItem cartItem = cartItemRepository.findById(item.getId())
+                            .orElse(null);
+
+                    if (cartItem != null) {
+                        int remainingQuantity = cartItem.getQuantity() - item.getQuantity();
+                        if (remainingQuantity > 0) {
+                            cartItem.setQuantity(remainingQuantity);
+                            cartItemRepository.save(cartItem);
+                        } else {
+                            cartItemRepository.delete(cartItem);
+                        }
+                    }
+                }
+            }
+            order.setTotalAmount(totalAmount);
+            orderRepository.save(order);
+            OrderHistory orderHistory = new OrderHistory();
+            orderHistory.setId(UUID.randomUUID().toString());
+            orderHistory.setStatus(OrderHistory.Status.PROCESSING);
+            orderHistory.setOrder(order);
+            orderHistory.setChangeBy(userRepository.findById(userId)
+                    .orElseThrow(() -> new IllegalArgumentException("Người dùng với ID " + userId + " không tồn tại.")));
+            orderHistoryRepository.save(orderHistory);
+            Payment payment = new Payment();
+            payment.setOrder(order);
+            payment.setPaymentMethod(Payment.PaymentMethod.VNPAY);
+            payment.setPaymentStatus(Payment.PaymentStatus.PENDING);
+            paymentRepository.save(payment);
+            for (RLock lock : productLocks) {
+                if (lock.isLocked() && lock.isHeldByCurrentThread()) {
+                    lock.unlock();
+                }
+            }
+            return order;
+        } catch (Exception e) {
+            for (RLock lock : productLocks) {
+                if (lock.isLocked() && lock.isHeldByCurrentThread()) {
+                    lock.unlock();
+                }
+            }
+            throw e;
+        }
+    }
+
+    public void updateOrderPaymentStatus(String orderId, String transactionId, Payment.PaymentStatus paymentStatus) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+        Payment payment = paymentRepository.findAll().stream()
+                .filter(p -> p.getOrder().getId().equals(orderId))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Payment not found"));
+        payment.setTransactionId(transactionId);
+        payment.setPaymentStatus(paymentStatus);
+        paymentRepository.save(payment);
+    }
+
+    private String generateOrderCodeVnPay() {
+        Random random = new Random();
+        return String.format("ORD%04d", random.nextInt(10000));
+    }
+
+
+    public VNPayResponse createPaymentUrl(String orderId, Float amount, String ipAddr) {
+        Map<String, String> vnpParams = new TreeMap<>();
+        vnpParams.put("vnp_Version", "2.1.0");
+        vnpParams.put("vnp_Command", "pay");
+        vnpParams.put("vnp_TmnCode", vnpTmnCode);
+
+        long amountInCents = Math.round(amount * 100);
+        vnpParams.put("vnp_Amount", String.valueOf(amountInCents));
+
+        vnpParams.put("vnp_CurrCode", "VND");
+        vnpParams.put("vnp_TxnRef", orderId);
+        String orderInfo = "Thanh toan don hang " + orderId;
+        try {
+            vnpParams.put("vnp_OrderInfo", URLEncoder.encode(orderInfo, StandardCharsets.UTF_8.toString()));
+        } catch (UnsupportedEncodingException e) {
+            vnpParams.put("vnp_OrderInfo", "Thanh toan don hang");
+            logger.error("Error encoding vnp_OrderInfo: {}", e.getMessage());
+        }
+
+        vnpParams.put("vnp_OrderType", "250000");
+        vnpParams.put("vnp_Locale", "vn");
+
+        String returnUrl = "http://localhost:8080/api/order/return";
+        try {
+            vnpParams.put("vnp_ReturnUrl", URLEncoder.encode(returnUrl, StandardCharsets.UTF_8.toString()));
+        } catch (UnsupportedEncodingException e) {
+            vnpParams.put("vnp_ReturnUrl", returnUrl);
+            logger.error("Error encoding vnp_ReturnUrl: {}", e.getMessage());
+        }
+
+        if ("0:0:0:0:0:0:0:1".equals(ipAddr)) {
+            ipAddr = "127.0.0.1";
+        }
+        vnpParams.put("vnp_IpAddr", ipAddr);
+
+        String createDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        vnpParams.put("vnp_CreateDate", createDate);
+
+        logger.info("VNPay request params (before hash): {}", vnpParams);
+
+        String queryString = VNPayUtil.getQueryString(vnpParams);
+        String vnpSecureHash = VNPayUtil.hmacSHA512(vnpHashSecret, queryString);
+        queryString += "&vnp_SecureHash=" + vnpSecureHash;
+
+        String paymentUrl = vnpPayUrl + "?" + queryString;
+        logger.info("Generated VNPay payment URL: {}", paymentUrl);
+
+        VNPayResponse response = new VNPayResponse();
+        response.setPaymentUrl(paymentUrl);
+        response.setStatus("00");
+        response.setMessage("Tạo URL thanh toán thành công");
+        return response;
+    }
+
+    public static String getQueryString(Map<String, String> params) {
+        StringBuilder query = new StringBuilder();
+        for (Map.Entry<String, String> entry : params.entrySet()) {
+            if (query.length() > 0) {
+                query.append("&");
+            }
+            query.append(entry.getKey()).append("=").append(entry.getValue());
+        }
+        return query.toString();
+    }
+
+    public VNPayResponse verifyPaymentReturn(Map<String, String> params) {
+        String vnpSecureHash = params.get("vnp_SecureHash");
+        params.remove("vnp_SecureHash");
+        logger.info("📌 VNPay Params trước khi hash: {}", params);
+        String queryString = VNPayUtil.getQueryString(new TreeMap<>(params));
+        logger.info("🔍 Query String trước khi hash: {}", queryString);
+        String calculatedHash = VNPayUtil.hmacSHA512(vnpHashSecret, queryString);
+        logger.info("🔍 Secure Hash VNPay gửi: {}", vnpSecureHash);
+        logger.info("🔍 Secure Hash tính toán được: {}", calculatedHash);
+        VNPayResponse response = new VNPayResponse();
+        if (calculatedHash.equals(vnpSecureHash)) {
+            String responseCode = params.get("vnp_ResponseCode");
+            logger.info("✅ VNPay Response Code: {}", responseCode);
+
+            if ("00".equals(responseCode)) {
+                response.setStatus("00");
+                response.setMessage("Thanh toán thành công");
+            } else {
+                response.setStatus(responseCode);
+                response.setMessage("Thanh toán thất bại: " + params.get("vnp_Message"));
+            }
+        } else {
+            response.setStatus("97");
+            response.setMessage("❌ Chữ ký không hợp lệ");
+            logger.warn("❌ Chữ ký không hợp lệ! Kiểm tra lại secret key hoặc query string.");
+        }
 
         return response;
     }
