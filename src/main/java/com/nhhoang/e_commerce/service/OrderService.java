@@ -58,6 +58,12 @@ public class OrderService {
     @Autowired
     private RedissonClient redissonClient;
 
+    @Autowired
+    private CouponService couponService;
+
+    @Autowired
+    private com.nhhoang.e_commerce.event.OrderKafkaProducer orderKafkaProducer;
+
     @Value("${vnpay.tmn-code}")
     private String vnpTmnCode;
 
@@ -135,7 +141,13 @@ public class OrderService {
                 }
             }
 
-            order.setTotalAmount(totalAmount);
+            float discountAmount = 0f;
+            if (request.getCouponCode() != null && !request.getCouponCode().trim().isEmpty()) {
+                discountAmount = couponService.applyAndDeductCouponWithLock(request.getCouponCode(), totalAmount);
+            }
+            float finalTotal = Math.max(0, totalAmount - discountAmount);
+
+            order.setTotalAmount(finalTotal);
             orderRepository.save(order);
 
             OrderHistory orderHistory = new OrderHistory();
@@ -158,6 +170,25 @@ public class OrderService {
                     lock.unlock();
                 }
             }
+            // Publish OrderPlacedEvent to Kafka Event Stream
+            try {
+                User user = order.getUser();
+                com.nhhoang.e_commerce.event.OrderPlacedEvent kafkaEvent = com.nhhoang.e_commerce.event.OrderPlacedEvent.builder()
+                        .orderId(order.getId())
+                        .orderCode(order.getOrderCode())
+                        .userId(user.getId())
+                        .userEmail(user.getEmail())
+                        .userName(user.getName())
+                        .totalAmount(order.getTotalAmount())
+                        .shippingAddress(order.getShippingAddress())
+                        .receiverPhone(order.getReceiverPhone())
+                        .timestamp(java.time.LocalDateTime.now())
+                        .build();
+                orderKafkaProducer.sendOrderPlacedEvent(kafkaEvent);
+            } catch (Exception kafkaEx) {
+                logger.warn("Could not publish Kafka OrderPlacedEvent: {}", kafkaEx.getMessage());
+            }
+
             return order.getId();
         } catch (Exception e) {
             for (RLock lock : productLocks) {

@@ -49,6 +49,9 @@ public class AuthController {
     private JavaMailSender mailSender;
 
     @Autowired
+    private com.nhhoang.e_commerce.service.EmailService emailService;
+
+    @Autowired
     private BCryptPasswordEncoder passwordEncoder;
 
     //login
@@ -178,13 +181,8 @@ public class AuthController {
             Long ttl = redisTemplate.getExpire(redisKey, TimeUnit.SECONDS);
             Instant expirationTime = ttl > 0 ? Instant.now().plus(ttl, ChronoUnit.SECONDS) : null;
 
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setTo(user.getEmail());
-            message.setSubject("Mã xác thực (OTP)");
-            message.setText(String.format("Chào %s,\n\nMã xác thực của bạn là: %s\nMã có hiệu lực trong 5 phút.",
-                    user.getName(), otpCode));
-            message.setFrom("your-email@gmail.com");
-            mailSender.send(message);
+            emailService.sendEmailAsync(user.getEmail(), "Mã xác thực (OTP)",
+                    String.format("Chào %s,\n\nMã xác thực của bạn là: %s\nMã có hiệu lực trong 5 phút.", user.getName(), otpCode));
 
             Map<String, Object> data = new HashMap<>();
             data.put("message", "Mã OTP đã được gửi qua email.");

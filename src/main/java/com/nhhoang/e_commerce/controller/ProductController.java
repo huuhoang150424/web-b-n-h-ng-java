@@ -33,6 +33,15 @@ public class ProductController {
     @Autowired
     private ProductService productService;
 
+    @Autowired
+    private com.nhhoang.e_commerce.service.ProductSearchService productSearchService;
+
+    @GetMapping("/search/es")
+    public ResponseEntity<?> searchProductsElasticsearch(@RequestParam String keyword) {
+        var results = productSearchService.searchProducts(keyword);
+        return ResponseEntity.ok(new com.nhhoang.e_commerce.utils.Api.SuccessResponse("Tìm kiếm Elasticsearch thành công", results));
+    }
+
     @PostMapping("/createProduct")
     public ResponseEntity<?> createProduct(@Valid @RequestBody CreateProductRequest request,
                                            BindingResult bindingResult,

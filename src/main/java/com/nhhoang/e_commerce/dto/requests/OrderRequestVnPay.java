@@ -9,4 +9,5 @@ public class OrderRequestVnPay {
     private String shippingAddress;
     private String receiverName;
     private String receiverPhone;
+    private String couponCode;
 }

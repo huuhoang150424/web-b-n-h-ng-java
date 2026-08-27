@@ -1,20 +1,24 @@
 package com.nhhoang.e_commerce.utils.Api;
 
-import java.util.Map;
-
 public class SuccessResponse {
     private boolean success = true;
     private int status = 200;
     private String message;
-    private Map<String, Object> result;
+    private Object result;
 
-    public SuccessResponse(String message, Map<String, Object> result) {
+    public SuccessResponse(String message, Object result) {
         this.message = message;
         this.result = result;
+    }
+
+    public SuccessResponse(String message, Object result, int status) {
+        this.message = message;
+        this.result = result;
+        this.status = status;
     }
 
     public boolean isSuccess() { return success; }
     public int getStatus() { return status; }
     public String getMessage() { return message; }
-    public Map<String, Object> getResult() { return result; }
+    public Object getResult() { return result; }
 }

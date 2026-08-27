@@ -10,6 +10,7 @@ public class CreateOrderCodRequest {
     private String shippingAddress;
     private String receiverName;
     private String receiverPhone;
+    private String couponCode;
 
     @Data
     public static class CartItemRequest {
